@@ -8,6 +8,10 @@
   <a href="README.md">English</a> · 简体中文
 </p>
 
+<p align="center">
+  <a href="https://pypi.org/project/ferry-codex/"><img alt="PyPI" src="https://img.shields.io/pypi/v/ferry-codex"></a>
+</p>
+
 Ferry 为 Codex 增加受控的 worker 委派能力。主 Codex session 保留项目上下文、
 界定任务并判断结果；边界明确的执行工作既可以交给 Codex 原生 worker，也可以
 交给用户明确选择的 custom model，例如 DeepSeek。

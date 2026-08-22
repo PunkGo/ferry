@@ -8,6 +8,10 @@
   English · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
+<p align="center">
+  <a href="https://pypi.org/project/ferry-codex/"><img alt="PyPI" src="https://img.shields.io/pypi/v/ferry-codex"></a>
+</p>
+
 Ferry adds controlled worker delegation to Codex. Your main Codex session keeps
 the project context, scopes the task, and judges the result. Bounded execution
 can stay on a native Codex worker or run on an explicitly selected custom model
