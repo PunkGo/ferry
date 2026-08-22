@@ -1,0 +1,7 @@
+[authority]
+agent_instructions_file = "AGENTS.md"
+task_state_file = "TASK.md"
+skill_file = "plugins/ferry/skills/ferry/SKILL.md"
+
+[recovery]
+read_order = ["AGENTS.md", "TASK.md", "plugins/ferry/skills/ferry/SKILL.md"]

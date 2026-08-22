@@ -1,0 +1,20 @@
+{
+  "name": "ferry",
+  "interface": {
+    "displayName": "Ferry"
+  },
+  "plugins": [
+    {
+      "name": "ferry",
+      "source": {
+        "source": "local",
+        "path": "./plugins/ferry"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "ferry",
+  "version": "0.1.1",
+  "description": "Delegate bounded Codex work while preserving owner judgment.",
+  "author": {
+    "name": "Ferry"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Ferry",
+    "shortDescription": "Bounded native or alternate-provider Codex workers.",
+    "longDescription": "Ferry keeps mission ownership with Codex while exposing one thin SDK-backed MCP for explicit alternate providers.",
+    "developerName": "Ferry",
+    "category": "Productivity",
+    "capabilities": ["Interactive"],
+    "defaultPrompt": ["Use Ferry to delegate this bounded task."]
+  },
+  "mcpServers": "./.mcp.json"
+}

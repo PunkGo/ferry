@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "ferry_codex.build_backend"
+backend-path = ["."]
+
+[project]
+name = "ferry-codex"
+version = "0.1.1"
+description = "Keep Codex as the lead while bounded work runs on your own models."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+  "mcp==2.0.0",
+  "packaging>=24",
+]
+
+[project.scripts]
+ferry = "ferry_codex.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/PunkGo/ferry"
+Repository = "https://github.com/PunkGo/ferry"
+Issues = "https://github.com/PunkGo/ferry/issues"
+
+[tool.setuptools]
+packages = ["ferry_codex", "ferry_mcp"]
+
+[tool.setuptools.package-dir]
+ferry_codex = "ferry_codex"
+ferry_mcp = "plugins/ferry/src/ferry_mcp"
+
+[tool.setuptools.data-files]
+"ferry_codex_resources/.agents/plugins" = [".agents/plugins/marketplace.json"]
+"ferry_codex_resources/plugins/ferry" = ["plugins/ferry/.mcp.json", "plugins/ferry/requirements.lock"]
+"ferry_codex_resources/plugins/ferry/.codex-plugin" = ["plugins/ferry/.codex-plugin/plugin.json"]
+"ferry_codex_resources/plugins/ferry/bin" = ["plugins/ferry/bin/ferry-mcp.py"]
+"ferry_codex_resources/plugins/ferry/skills/ferry" = ["plugins/ferry/skills/ferry/SKILL.md"]
+"ferry_codex_resources/plugins/ferry/skills/ferry/references" = ["plugins/ferry/skills/ferry/references/worker-brief.md"]
+"ferry_codex_resources/plugins/ferry/src/ferry_mcp" = [
+  "plugins/ferry/src/ferry_mcp/__init__.py",
+  "plugins/ferry/src/ferry_mcp/advisory.py",
+  "plugins/ferry/src/ferry_mcp/adapter.py",
+  "plugins/ferry/src/ferry_mcp/server.py",
+]

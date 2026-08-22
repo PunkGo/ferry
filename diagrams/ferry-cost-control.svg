@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="360" viewBox="0 0 680 360" role="img" aria-labelledby="title desc">
+  <title id="title">Ferry keeps Codex as lead while bounded work runs on native or custom-model workers</title>
+  <desc id="desc">Codex scopes and judges work. Ferry routes a bounded brief to a native Codex worker or an explicitly configured DeepSeek or custom-model worker. The diff and test evidence return to Codex for verification.</desc>
+  <defs>
+    <marker id="green-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0 0 8 3 0 6Z" fill="#3fb950"/>
+    </marker>
+    <marker id="blue-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0 0 8 3 0 6Z" fill="#58a6ff"/>
+    </marker>
+    <filter id="soft-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .mono{font-family:'JetBrains Mono','Fira Code','Cascadia Code',Menlo,monospace}
+      .label{font-size:11px;font-weight:700;letter-spacing:.3px}
+      .small{font-size:8px;fill:#8b949e}
+      .muted{fill:#6e7681}
+      .section{font-size:10px;font-weight:700;fill:#8b949e;letter-spacing:1px}
+    </style>
+  </defs>
+
+  <rect width="680" height="360" rx="10" fill="#0d1117"/>
+  <circle cx="20" cy="15" r="5" fill="#ff5f57"/>
+  <circle cx="36" cy="15" r="5" fill="#febc2e"/>
+  <circle cx="52" cy="15" r="5" fill="#28c840"/>
+  <text x="340" y="19" text-anchor="middle" class="mono label" fill="#3fb950">KEEP CODEX IN CHARGE</text>
+
+  <rect x="24" y="43" width="170" height="68" rx="7" fill="#0d1520" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="109" y="65" text-anchor="middle" class="mono label" fill="#58a6ff">CODEX LEAD</text>
+  <text x="109" y="83" text-anchor="middle" class="mono small">project context · scope</text>
+  <text x="109" y="97" text-anchor="middle" class="mono small">judgment · verification</text>
+
+  <line x1="194" y1="77" x2="236" y2="77" stroke="#3fb950" stroke-width="1.5" marker-end="url(#green-arrow)"/>
+  <text x="215" y="68" text-anchor="middle" class="mono small">delegate</text>
+
+  <rect x="238" y="43" width="132" height="68" rx="7" fill="#0a2d1f" stroke="#3fb950" stroke-width="1.8" filter="url(#soft-glow)"/>
+  <text x="304" y="66" text-anchor="middle" class="mono label" fill="#3fb950">FERRY</text>
+  <text x="304" y="84" text-anchor="middle" class="mono small">bounded brief</text>
+  <text x="304" y="98" text-anchor="middle" class="mono small">explicit route</text>
+
+  <path d="M370 67 C395 67 397 55 420 55" fill="none" stroke="#d29922" stroke-width="1.5" marker-end="url(#green-arrow)"/>
+  <text x="394" y="48" text-anchor="middle" class="mono small">default</text>
+  <rect x="422" y="36" width="234" height="40" rx="6" fill="#1a1500" stroke="#d29922" stroke-width="1.5"/>
+  <text x="440" y="53" class="mono label" fill="#d29922">NATIVE CODEX WORKER</text>
+  <text x="440" y="67" class="mono small">current-session model inheritance</text>
+
+  <path d="M370 88 C395 88 397 106 420 106" fill="none" stroke="#bc8cff" stroke-width="1.5" marker-end="url(#blue-arrow)"/>
+  <text x="393" y="111" text-anchor="middle" class="mono small">explicit</text>
+  <rect x="422" y="88" width="234" height="48" rx="6" fill="#171126" stroke="#bc8cff" stroke-width="1.5"/>
+  <text x="440" y="107" class="mono label" fill="#bc8cff">CUSTOM-MODEL WORKER</text>
+  <text x="440" y="122" class="mono small">DeepSeek · your configured provider</text>
+
+  <text x="340" y="164" text-anchor="middle" class="mono section">ONE OWNER LOOP</text>
+
+  <rect x="24" y="181" width="138" height="54" rx="6" fill="#161b22" stroke="#30363d"/>
+  <text x="93" y="202" text-anchor="middle" class="mono label" fill="#f0f6fc">1 · BOUNDED BRIEF</text>
+  <text x="93" y="220" text-anchor="middle" class="mono small">goal · limits · checks</text>
+
+  <line x1="162" y1="208" x2="184" y2="208" stroke="#3fb950" stroke-width="1.5" marker-end="url(#green-arrow)"/>
+  <rect x="186" y="181" width="138" height="54" rx="6" fill="#161b22" stroke="#30363d"/>
+  <text x="255" y="202" text-anchor="middle" class="mono label" fill="#f0f6fc">2 · WORKER RUNS</text>
+  <text x="255" y="220" text-anchor="middle" class="mono small">focused execution</text>
+
+  <line x1="324" y1="208" x2="346" y2="208" stroke="#3fb950" stroke-width="1.5" marker-end="url(#green-arrow)"/>
+  <rect x="348" y="181" width="138" height="54" rx="6" fill="#161b22" stroke="#30363d"/>
+  <text x="417" y="202" text-anchor="middle" class="mono label" fill="#f0f6fc">3 · DIFF + TESTS</text>
+  <text x="417" y="220" text-anchor="middle" class="mono small">delivery data returns</text>
+
+  <line x1="486" y1="208" x2="508" y2="208" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#blue-arrow)"/>
+  <rect x="510" y="181" width="146" height="54" rx="6" fill="#0d1520" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="583" y="202" text-anchor="middle" class="mono label" fill="#58a6ff">4 · CODEX DECIDES</text>
+  <text x="583" y="220" text-anchor="middle" class="mono small">accept · steer · stop</text>
+
+  <path d="M583 235 C583 260 93 260 93 237" fill="none" stroke="#58a6ff" stroke-width="1" stroke-dasharray="5 4" marker-end="url(#blue-arrow)"/>
+  <text x="340" y="255" text-anchor="middle" class="mono small">same owner can correct the same worker thread</text>
+
+  <text x="340" y="286" text-anchor="middle" class="mono section">WHAT YOU KEEP</text>
+  <rect x="24" y="299" width="198" height="43" rx="6" fill="#161b22" stroke="#21262d"/>
+  <text x="38" y="317" class="mono label" fill="#58a6ff">CODEX EXPERIENCE</text>
+  <text x="38" y="332" class="mono small">tools · sandbox · history</text>
+
+  <rect x="241" y="299" width="198" height="43" rx="6" fill="#161b22" stroke="#21262d"/>
+  <text x="255" y="317" class="mono label" fill="#bc8cff">YOUR MODELS</text>
+  <text x="255" y="332" class="mono small">provider · auth · cost choice</text>
+
+  <rect x="458" y="299" width="198" height="43" rx="6" fill="#161b22" stroke="#21262d"/>
+  <text x="472" y="317" class="mono label" fill="#3fb950">FINAL JUDGMENT</text>
+  <text x="472" y="332" class="mono small">real diff · real checks</text>
+</svg>

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "ferry": {
+      "command": "python3",
+      "args": ["./bin/ferry-mcp.py"],
+      "cwd": ".",
+      "required": true
+    }
+  }
+}
