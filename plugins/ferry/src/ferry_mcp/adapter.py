@@ -90,6 +90,8 @@ def _thread_liveness(native: Any, operation: str) -> str:
     status = _field(thread, "status")
     root = _field(status, "root")
     liveness = _value(_field(root, "type"))
+    if liveness == "systemError":
+        return "failed_draining"
     if liveness not in ("active", "idle"):
         raise FerryFailure("UNEXPECTED_NATIVE_THREAD_STATUS", operation,
                            "native thread read did not contain an active or idle ThreadStatus",
@@ -109,6 +111,7 @@ class LiveTurn:
     stream: AsyncIterator[Any]
     next_event: Optional[asyncio.Task[Any]] = None
     native_read: Optional[asyncio.Task[Any]] = None
+    turn_started: bool = False
 
 
 class FerryAdapter:
@@ -190,9 +193,7 @@ class FerryAdapter:
                                    expected_cwd=cwd, actual_cwd=actual_cwd, thread_id=thread.id)
             turn = await thread.turn(brief, cwd=cwd, sandbox=self._sandbox_factory(sandbox))
             self._live = LiveTurn(thread=thread, turn=turn, stream=turn.stream())
-            return {"ok": True, "thread_id": thread.id, "turn_id": turn.id, "provider": actual_provider,
-                    "model": actual_model, "model_verification": "verified" if model and actual_model == model else "unsupported",
-                    "cwd": actual_cwd, "status": "active"}
+            return self._starting_result(thread.id, turn.id, actual_provider, model, actual_model, actual_cwd)
         except FerryFailure as exc:
             return exc.result()
         except Exception as exc:
@@ -234,9 +235,12 @@ class FerryAdapter:
                     return await self._nonterminal_wait_result(live, thread_id, turn_id, events, deadline)
                 event = live.next_event.result()
                 live.next_event = None
+                method = getattr(event, "method", type(event).__name__)
                 payload = getattr(event, "payload", None)
-                events.append({"method": getattr(event, "method", type(event).__name__), "payload": _bounded(payload)})
-                if getattr(event, "method", None) == "turn/completed":
+                events.append({"method": method, "payload": _bounded(payload)})
+                if method == "turn/started":
+                    live.turn_started = True
+                if method == "turn/completed":
                     terminal = _value(getattr(getattr(payload, "turn", None), "status", None))
                     if terminal is None and isinstance(payload, dict):
                         terminal = _value(payload.get("status"))
@@ -294,8 +298,17 @@ class FerryAdapter:
         live.native_read = None
         native = native_read.result()
         liveness = _thread_liveness(native, "worker_wait")
+        if liveness == "failed_draining":
+            return {"ok": True, "thread_id": thread_id, "turn_id": turn_id,
+                    "status": "failed_draining", "native_status": "systemError", "events": events}
+        if liveness == "active" and live.turn_started:
+            status = "active"
+        elif liveness == "active":
+            status = "starting"
+        else:
+            status = "terminal_pending"
         return {"ok": True, "thread_id": thread_id, "turn_id": turn_id,
-                "status": "active" if liveness == "active" else "terminal_pending", "events": events}
+                "status": status, "events": events}
 
     @staticmethod
     def _liveness_timeout(thread_id: str, turn_id: str, events: list[dict[str, Any]]) -> dict[str, Any]:
@@ -383,10 +396,19 @@ class FerryAdapter:
                                    expected_cwd=cwd, actual_cwd=actual_cwd, thread_id=thread.id)
             turn = await thread.turn(brief, cwd=cwd, sandbox=self._sandbox_factory(sandbox))
             self._live = LiveTurn(thread=thread, turn=turn, stream=turn.stream())
-            return {"ok": True, "thread_id": thread.id, "turn_id": turn.id, "provider": actual_provider,
-                    "model": actual_model, "model_verification": "verified" if model and actual_model == model else "unsupported",
-                    "cwd": actual_cwd, "status": "active"}
+            return self._starting_result(thread.id, turn.id, actual_provider, model, actual_model, actual_cwd)
         except FerryFailure as exc:
             return exc.result()
         except Exception as exc:
             return _cause(operation, exc, thread_id=thread_id).result()
+
+    @staticmethod
+    def _starting_result(thread_id: str, turn_id: str, provider: str, requested_model: str | None,
+                         observed_model: str | None, cwd: str | None) -> dict[str, Any]:
+        result = {"ok": True, "thread_id": thread_id, "turn_id": turn_id, "provider": provider,
+                  "requested_model": requested_model, "observed_model": observed_model,
+                  "model_verification": "verified" if observed_model is not None else "not_available",
+                  "cwd": cwd, "status": "starting"}
+        if observed_model is None:
+            result["model_verification_reason"] = "codex_thread_metadata_not_available"
+        return result

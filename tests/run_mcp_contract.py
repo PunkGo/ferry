@@ -51,6 +51,13 @@ async def main() -> None:
 
             start = await call(session, "worker_start", cwd=str(ROOT), provider="openai", brief="x")
             assert start["ok"]
+            assert start["status"] == "starting"
+            assert start["requested_model"] is None and start["observed_model"] is None
+            assert start["model_verification"] == "not_available"
+            assert start["model_verification_reason"] == "codex_thread_metadata_not_available"
+            immediate_interrupt = await call(session, "worker_interrupt", thread_id=start["thread_id"], turn_id=start["turn_id"])
+            assert immediate_interrupt["error"]["code"] == "SDK_OPERATION_FAILED"
+            assert immediate_interrupt["error"]["cause"] == "native active turn is not registered"
             collision = await call(session, "worker_start", cwd=str(ROOT), provider="openai", brief="x")
             assert collision["error"]["code"] == "ACTIVE_TURN_EXISTS"
             before=asyncio.get_running_loop().time()
@@ -61,8 +68,16 @@ async def main() -> None:
             assert steered["ok"]
             terminal = await call(session, "worker_wait", thread_id=start["thread_id"], turn_id=start["turn_id"], timeout_ms=10, max_events=4)
             assert terminal["status"] == "terminal"
+            model_visible = await call(session, "worker_start", cwd=str(ROOT), provider="openai", model="visible-model", brief="visible")
+            assert model_visible["status"] == "starting"
+            assert model_visible["requested_model"] == "visible-model" and model_visible["observed_model"] == "visible-model"
+            assert model_visible["model_verification"] == "verified" and "model_verification_reason" not in model_visible
+            visible_active = await call(session, "worker_wait", thread_id=model_visible["thread_id"], turn_id=model_visible["turn_id"], timeout_ms=20, max_events=1)
+            assert visible_active["status"] == "active"
+            await call(session, "worker_interrupt", thread_id=model_visible["thread_id"], turn_id=model_visible["turn_id"])
+            await call(session, "worker_wait", thread_id=model_visible["thread_id"], turn_id=model_visible["turn_id"], timeout_ms=10, max_events=4)
             follow = await call(session, "worker_follow_up", thread_id=start["thread_id"], provider="openai", cwd=str(ROOT), brief="next")
-            assert follow["ok"] and follow["thread_id"] == start["thread_id"]
+            assert follow["ok"] and follow["thread_id"] == start["thread_id"] and follow["status"] == "starting"
             pending = await call(session, "worker_wait", thread_id=follow["thread_id"], turn_id=follow["turn_id"], timeout_ms=20, max_events=2)
             assert pending["status"] == "active"
             interrupted = await call(session, "worker_interrupt", thread_id=follow["thread_id"], turn_id=follow["turn_id"])
@@ -109,9 +124,12 @@ async def main() -> None:
             winner = next(item for item in concurrent if item["ok"])
             assert sum(item["ok"] for item in concurrent) == 1
             assert sum(item.get("error", {}).get("code") == "ACTIVE_TURN_EXISTS" for item in concurrent) == 1
+            concurrent_ready = await call(session, "worker_wait", thread_id=winner["thread_id"], turn_id=winner["turn_id"], timeout_ms=20, max_events=1)
+            assert concurrent_ready["status"] == "active"
             await call(session, "worker_interrupt", thread_id=winner["thread_id"], turn_id=winner["turn_id"])
             await call(session, "worker_wait", thread_id=winner["thread_id"], turn_id=winner["turn_id"], timeout_ms=10, max_events=4)
             failed_terminal = await call(session, "worker_start", cwd=str(ROOT), provider="openai", brief="failed-terminal")
+            assert failed_terminal["ok"], failed_terminal
             native_failure = await call(session, "worker_wait", thread_id=failed_terminal["thread_id"], turn_id=failed_terminal["turn_id"], timeout_ms=10, max_events=4)
             assert native_failure["error"]["code"] == "TURN_FAILED"
             assert native_failure["error"]["native_error"] == "{'message': 'native failed cause'}"
@@ -125,6 +143,16 @@ async def main() -> None:
             assert failed_cleanup["error"]["code"] == "SDK_OPERATION_FAILED"
             assert failed_cleanup["error"]["cause"] == "controlled terminal cleanup failure"
             assert [event["method"] for event in failed_cleanup["events"]] == ["turn/started", "turn/completed"]
+            system_error = await call(session, "worker_start", cwd=str(ROOT), provider="openai", brief="system-error")
+            system_draining = await call(session, "worker_wait", thread_id=system_error["thread_id"], turn_id=system_error["turn_id"], timeout_ms=10, max_events=1)
+            assert system_draining["status"] == "failed_draining" and system_draining["native_status"] == "systemError"
+            assert [event["method"] for event in system_draining["events"]] == ["turn/started"]
+            system_terminal = await call(session, "worker_wait", thread_id=system_error["thread_id"], turn_id=system_error["turn_id"], timeout_ms=10, max_events=4)
+            assert system_terminal["error"]["code"] == "TURN_FAILED"
+            assert system_terminal["error"]["native_error"] == "{'message': 'native system error cause'}"
+            assert [event["method"] for event in system_terminal["events"]] == ["item/updated", "turn/completed"]
+            system_replay = await call(session, "worker_wait", thread_id=system_error["thread_id"], turn_id=system_error["turn_id"], timeout_ms=10, max_events=1)
+            assert system_replay["error"]["code"] == "LIVE_HANDLE_UNAVAILABLE"
             unexpected = await call(session, "worker_start", cwd=str(ROOT), provider="openai", brief="unexpected-status")
             unexpected_status = await call(session, "worker_wait", thread_id=unexpected["thread_id"], turn_id=unexpected["turn_id"], timeout_ms=10, max_events=1)
             assert unexpected_status["error"]["code"] == "UNEXPECTED_NATIVE_THREAD_STATUS"
@@ -137,6 +165,8 @@ async def main() -> None:
             assert huge_terminal["native_status"] == "completed" and len(huge_terminal["final_response"]) <= 4_110
             assert huge_terminal["final_response_verification"] == "terminal-payload"
             abandoned = await call(session, "worker_start", cwd=str(ROOT), provider="openai", brief="abandon")
+            abandoned_ready = await call(session, "worker_wait", thread_id=abandoned["thread_id"], turn_id=abandoned["turn_id"], timeout_ms=20, max_events=1)
+            assert abandoned_ready["status"] == "active"
             await call(session, "worker_interrupt", thread_id=abandoned["thread_id"], turn_id=abandoned["turn_id"])
             await call(session, "worker_wait", thread_id=abandoned["thread_id"], turn_id=abandoned["turn_id"], timeout_ms=10, max_events=4)
             failed = await call(session, "worker_start", cwd=str(ROOT), provider="openai", brief="failure")

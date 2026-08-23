@@ -26,13 +26,15 @@ class Event: method: str; payload: object
 class Status(Enum): completed="completed"; interrupted="interrupted"; failed="failed"
 class ActiveThreadStatus(BaseModel): type: Literal["active"] = "active"
 class IdleThreadStatus(BaseModel): type: Literal["idle"] = "idle"
-class ThreadStatus(RootModel[ActiveThreadStatus | IdleThreadStatus]): pass
+class SystemErrorThreadStatus(BaseModel): type: Literal["systemError"] = "systemError"
+class ThreadStatus(RootModel[ActiveThreadStatus | IdleThreadStatus | SystemErrorThreadStatus]): pass
 class Turn:
  def __init__(self, thread, ident, fail=False): self.thread,self.thread_id,self.id,self.fail,self.queue,self.cleanup_failure=thread,thread.id,ident,fail,asyncio.Queue(),False; self.queue.put_nowait(Event("turn/started", {}))
  async def stream(self):
   try:
    while True:
     event=await self.queue.get()
+    if event.method=="turn/started": self.thread.turn_ready=True
     if event.method=="thread/status/idle": self.thread.liveness="idle"
     yield event
     if self.fail: raise RuntimeError("controlled terminal stream failure")
@@ -40,15 +42,17 @@ class Turn:
   finally:
    if self.cleanup_failure: raise RuntimeError("controlled terminal cleanup failure")
  async def steer(self, _):
+  if not self.thread.turn_ready: raise RuntimeError("native active turn is not registered")
   if self.thread.liveness != "active": raise RuntimeError("no active turn to steer")
   if self.thread.read_gate is not None: self.thread.read_gate.set()
   self.thread.liveness="idle"; self.queue.put_nowait(Event("turn/completed", {"status":Status.completed}))
  async def interrupt(self):
+  if not self.thread.turn_ready: raise RuntimeError("native active turn is not registered")
   if self.thread.liveness != "active": raise RuntimeError("no active turn to interrupt")
   if self.thread.read_gate is not None: self.thread.read_gate.set()
   self.fail=False; self.thread.liveness="idle"; self.queue.put_nowait(Event("turn/completed", {"status":Status.interrupted}))
 class Thread:
- def __init__(self, client, ident, cwd, provider, model=None): self.client,self.id,self.cwd,self.provider,self.model,self.read_count,self.liveness,self.read_failure,self.read_timeout,self.read_gate,self.unexpected_status=client,ident,cwd,provider,model,0,"active",False,False,None,False
+ def __init__(self, client, ident, cwd, provider, model=None): self.client,self.id,self.cwd,self.provider,self.model,self.read_count,self.liveness,self.read_failure,self.read_timeout,self.read_gate,self.unexpected_status,self.system_error,self.turn_ready=client,ident,cwd,provider,model,0,"active",False,False,None,False,False,False
  async def read(self, include_turns=False):
   self.read_count+=1
   if include_turns: raise RuntimeError("terminal path must not read history")
@@ -56,12 +60,13 @@ class Thread:
   if self.read_timeout:
    if self.read_count > 2: raise AssertionError("duplicate native liveness read")
    self.read_gate=asyncio.Event(); await self.read_gate.wait()
-  native_status=SimpleNamespace(type="unexpected") if self.unexpected_status else (IdleThreadStatus() if self.liveness=="idle" else ActiveThreadStatus())
+  native_status=SimpleNamespace(type="unexpected") if self.unexpected_status else (SystemErrorThreadStatus() if self.system_error else (IdleThreadStatus() if self.liveness=="idle" else ActiveThreadStatus()))
   status=SimpleNamespace(root=native_status) if self.unexpected_status else ThreadStatus(native_status)
-  return SimpleNamespace(thread=SimpleNamespace(model_provider="wrong" if self.provider=="mismatch" else self.provider,model="different-model" if self.model=="mismatch-model" else None,cwd=SimpleNamespace(root=self.cwd),status=status))
+  return SimpleNamespace(thread=SimpleNamespace(model_provider="wrong" if self.provider=="mismatch" else self.provider,model="different-model" if self.model=="mismatch-model" else self.model,cwd=SimpleNamespace(root=self.cwd),status=status))
  async def turn(self, brief, **_):
   if self.model=="mismatch-model": raise AssertionError("turn must not run after model mismatch")
   self.liveness="active"
+  self.turn_ready=False
   ident=f"turn-{self.client.n}"; self.client.n+=1
   turn=Turn(self,ident,brief=="failure")
   if brief=="failed-terminal": turn.queue.put_nowait(Event("turn/completed", {"status":Status.failed,"error":{"message":"native failed cause"}}))
@@ -75,6 +80,7 @@ class Thread:
   if brief=="native-read-failure": self.read_failure=True
   if brief=="native-read-timeout": self.read_timeout=True
   if brief=="unexpected-status": self.unexpected_status=True
+  if brief=="system-error": self.system_error=True; turn.queue.put_nowait(Event("item/updated", {"queued":True})); turn.queue.put_nowait(Event("turn/completed", {"status":Status.failed,"error":{"message":"native system error cause"}}))
   return turn
 class Client:
  def __init__(self): self.n=1; self.threads={}

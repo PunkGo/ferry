@@ -9,19 +9,30 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from ferry_codex import build_backend, integration
-from ferry_codex.build_identity import FULL_VERSION
+from ferry_codex.build_identity import FULL_VERSION, PUBLIC_VERSION
 from ferry_codex.cli import main
 
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "ferry"
 MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
+
+
+project_version = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
+plugin_version = json.loads((PLUGIN / ".codex-plugin" / "plugin.json").read_text())["version"]
+mcp_module = ast.parse((PLUGIN / "src" / "ferry_mcp" / "__init__.py").read_text())
+mcp_version = next(node.value.value for node in mcp_module.body
+                   if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "__version__"
+                                                           for target in node.targets)
+                   if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str))
+assert project_version == plugin_version == mcp_version == PUBLIC_VERSION
 
 
 FAKE = '''#!/usr/bin/env python3
@@ -121,7 +132,10 @@ with tempfile.TemporaryDirectory(prefix="ferry-console-") as raw:
             assert main(["--ferry-home", str(symlink_home), "--codex", str(fake), "setup"]) == 1 and marker.read_text() == "keep"
 
         state(state_file)
-        assert main(["--ferry-home", str(home), "--codex", str(fake), "setup"]) == 0
+        setup_output = StringIO()
+        with redirect_stdout(setup_output):
+            assert main(["--ferry-home", str(home), "--codex", str(fake), "setup"]) == 0
+        assert integration.DOCTOR_PROMPT in setup_output.getvalue()
         assert main(["--ferry-home", str(home), "--codex", str(fake), "status"]) == 0
         binding = stage / "plugins" / "ferry" / ".mcp.json"
         binding_payload = json.loads(binding.read_text()); binding_payload["mcpServers"]["ferry"]["env"]["FERRY_CODEX_BIN"] = "/wrong/codex"
@@ -334,6 +348,7 @@ with tempfile.TemporaryDirectory(prefix="ferry-console-") as raw:
     completed = subprocess.run((str(ferry), "--ferry-home", str(temp / "uv-home"), "--codex", str(fake), "setup"),
                                cwd=hostile, env=cli_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     assert completed.returncode == 0 and completed.stderr == "", completed.stderr
+    assert integration.DOCTOR_PROMPT in completed.stdout
     uv_args, uv_cwd = json.loads(record.read_text())
     assert uv_args == ["--no-config", "pip", "install", "--python", pip_probe_result["executable"], "--no-deps", "openai-codex==0.147.0"]
     assert Path(uv_cwd).resolve() == hostile.resolve()
@@ -342,6 +357,7 @@ with tempfile.TemporaryDirectory(prefix="ferry-console-") as raw:
     failed = subprocess.run((str(ferry), "--ferry-home", str(temp / "uv-failed-home"), "--codex", str(fake), "setup"),
                             cwd=hostile, env=failed_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     assert failed.returncode == 1 and "FERRY_UV_SENTINEL" in failed.stderr and "CalledProcessError" in failed.stderr, (failed.returncode, failed.stdout, failed.stderr)
+    assert integration.DOCTOR_PROMPT not in failed.stdout
 
     failed_codex = temp / "failed-codex"
     failed_codex.write_text("#!/usr/bin/env python3\nimport sys\nsys.stderr.write('controlled Codex stderr\\n')\nraise SystemExit(42)\n")

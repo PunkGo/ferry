@@ -21,6 +21,8 @@ from .build_identity import FULL_VERSION, PUBLIC_VERSION
 SDK_PIN = "0.147.0"
 SDK_NAME = "openai-codex"
 SDK_CLI_REQUIREMENT = "openai-codex-cli-bin"
+DOCTOR_PROMPT = ("Run Ferry Doctor for my configured custom provider and model in this project. "
+                 "Keep it read-only, test the real coding-tool lifecycle, and explain any BLOCKED result by owner.")
 
 
 class IntegrationError(RuntimeError):
@@ -380,6 +382,8 @@ def setup(*, ferry_home: Path | None = None, codex: str | None = None) -> None:
         if snapshot_parent is not None and snapshot_parent.exists():
             shutil.rmtree(snapshot_parent)
     print(f"Ferry {FULL_VERSION} is registered. Start a fresh Codex session to discover its Skill and MCP tools.")
+    print("Then paste this prompt (name the intended provider and model if Codex cannot infer them):")
+    print(DOCTOR_PROMPT)
 
 
 def _validate_staged_runtime(stage_root: Path, host: Path) -> None:
