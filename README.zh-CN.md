@@ -1,7 +1,7 @@
 # Ferry
 
 <p align="center">
-  <strong>保留 Codex，降低成本。</strong>
+  <strong>保留 Agent，选择模型。</strong>
 </p>
 
 <p align="center">
@@ -12,8 +12,24 @@
   <a href="https://pypi.org/project/ferry-codex/"><img alt="PyPI" src="https://img.shields.io/pypi/v/ferry-codex"></a>
 </p>
 
-Ferry 让 Codex 把边界明确的实现任务委派给你已经配置好的 custom model。主
-Codex session 保留项目上下文、控制工作并作出最终判断。
+Ferry 让 Codex 把边界明确的实现工作委派给已经配置并明确选择的 provider 和 model。
+Codex 始终掌控任务：它保留项目上下文、划定边界、控制并验证工作，并作出最终判断。
+负责使命的 Agent 与执行边界工作的 model，是两件独立的事。
+
+## 为什么需要 Ferry
+
+不同任务可以适合不同模型。对于边界明确的实现工作，已配置的模型可能在成本、
+速度或具体的编码行为上更契合；成本是值得争取的收益，并非保证。
+
+Codex 保留上下文、控制、验证和判断权。Ferry 为它提供一条窄的委派接口，
+用于已经配置并明确选择的 provider 和 model。
+它不另起一套 Agent 框架，也不自动路由；provider 和 model 的选择始终明确且由用户掌控。
+
+> **Ferry work, not judgment. 把工作运出去，不把判断权交出去。**
+
+[阅读 Ferry Thesis →](THESIS.md)
+
+![Codex 担任 lead，Ferry 为边界明确的工作提供委派接口](diagrams/ferry-cost-control.svg)
 
 ## 安装
 
@@ -76,18 +92,6 @@ Steer Ferry worker：保留 public API，并把改动限制在 src/parser.py。
 
 Worker report 只是交付数据。Codex 会检查真实 worktree，并执行真正的验收命令，
 然后才决定是否接受。
-
-## 为什么需要 Ferry
-
-前沿模型值得用在困难推理、规划和审查上，但边界明确的实现任务不一定都需要
-最昂贵的模型。
-
-Ferry 把判断权留在 Codex，让成本更低的 custom model 完成聚焦的执行工作。
-Codex 随后检查真实 diff、执行检查，并决定接受、steer、返工、interrupt 或停止。
-
-> **Ferry work, not judgment. 把工作运出去，不把判断权交出去。**
-
-![Codex 担任 lead，Ferry 将边界明确的工作交给原生或 custom-model worker](diagrams/ferry-cost-control.svg)
 
 ## 使用 custom provider
 

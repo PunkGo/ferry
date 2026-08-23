@@ -1,7 +1,7 @@
 # Ferry
 
 <p align="center">
-  <strong>Keep Codex. Spend less.</strong>
+  <strong>Keep the agent. Choose the model.</strong>
 </p>
 
 <p align="center">
@@ -12,9 +12,28 @@
   <a href="https://pypi.org/project/ferry-codex/"><img alt="PyPI" src="https://img.shields.io/pypi/v/ferry-codex"></a>
 </p>
 
-Ferry lets Codex delegate bounded implementation work to custom models you
-already configured. Your main Codex session keeps the project context, controls
-the work, and makes the final call.
+Ferry lets Codex delegate bounded implementation work to an explicitly chosen,
+already configured provider and model. Codex stays in charge: it keeps the project
+context, defines the boundaries, controls and verifies the work, and makes the
+final judgment. The agent that owns the mission and the model that performs
+bounded work are separate concerns.
+
+## Why Ferry
+
+Different tasks can fit different models. For bounded implementation work, a
+configured model may be a better fit for its cost, speed, or coding behavior;
+cost is a benefit to seek, not a guarantee.
+
+Codex keeps the context, control, verification, and judgment. Ferry gives it a
+narrow delegation seam for an explicitly chosen, already configured provider and model.
+It adds no separate agent framework and does not route automatically: provider and
+model choice remains explicit and user-controlled.
+
+> **Ferry work, not judgment.**
+
+[Read the Ferry Thesis →](THESIS.md)
+
+![Codex leads while Ferry provides a delegation seam for bounded work](diagrams/ferry-cost-control.svg)
 
 ## Install
 
@@ -79,19 +98,6 @@ Interrupt the Ferry worker now.
 
 The worker's report is delivery data. Codex checks the actual worktree and runs
 the real acceptance commands before accepting it.
-
-## Why Ferry
-
-Frontier models are worth using for hard reasoning, planning, and review. A
-bounded implementation task does not always need the most expensive model.
-
-Ferry keeps judgment in Codex while a lower-cost custom model handles focused
-execution. Codex can inspect the real diff, run the checks, and accept, steer,
-rework, interrupt, or stop the worker.
-
-> **Ferry work, not judgment.**
-
-![Codex leads while Ferry routes bounded work to a native or custom-model worker](diagrams/ferry-cost-control.svg)
 
 ## Use a custom provider
 
