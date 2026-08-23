@@ -12,26 +12,18 @@
   <a href="https://pypi.org/project/ferry-codex/"><img alt="PyPI" src="https://img.shields.io/pypi/v/ferry-codex"></a>
 </p>
 
-Ferry lets Codex delegate bounded implementation work to an explicitly chosen,
-already configured provider and model. Codex stays in charge: it keeps the project
-context, defines the boundaries, controls and verifies the work, and makes the
-final judgment. The agent that owns the mission and the model that performs
-bounded work are separate concerns.
+Ferry keeps Codex in charge while bounded work runs on the model you choose.
+
+**Agent ≠ Model.** [Read the Ferry Thesis →](THESIS.md)
 
 ## Why Ferry
 
-Different tasks can fit different models. For bounded implementation work, a
-configured model may be a better fit for its cost, speed, or coding behavior;
-cost is a benefit to seek, not a guarantee.
+Some tasks deserve frontier reasoning. Others are bounded enough for a faster,
+cheaper, or simply better-suited coding model.
 
-Codex keeps the context, control, verification, and judgment. Ferry gives it a
-narrow delegation seam for an explicitly chosen, already configured provider and model.
-It adds no separate agent framework and does not route automatically: provider and
-model choice remains explicit and user-controlled.
+Ferry preserves that choice without replacing Codex or choosing models for you.
 
 > **Ferry work, not judgment.**
-
-[Read the Ferry Thesis →](THESIS.md)
 
 ![Codex leads while Ferry provides a delegation seam for bounded work](diagrams/ferry-cost-control.svg)
 

@@ -12,22 +12,18 @@
   <a href="https://pypi.org/project/ferry-codex/"><img alt="PyPI" src="https://img.shields.io/pypi/v/ferry-codex"></a>
 </p>
 
-Ferry 让 Codex 把边界明确的实现工作委派给已经配置并明确选择的 provider 和 model。
-Codex 始终掌控任务：它保留项目上下文、划定边界、控制并验证工作，并作出最终判断。
-负责使命的 Agent 与执行边界工作的 model，是两件独立的事。
+Ferry 让 Codex 继续主导，把边界明确的工作交给你选择的模型。
+
+**Agent ≠ Model.** [阅读 Ferry Thesis →](THESIS.md)
 
 ## 为什么需要 Ferry
 
-不同任务可以适合不同模型。对于边界明确的实现工作，已配置的模型可能在成本、
-速度或具体的编码行为上更契合；成本是值得争取的收益，并非保证。
+有些任务值得使用前沿模型的推理能力；另一些任务边界明确，更适合更快、
+成本更低或更契合的编码模型。
 
-Codex 保留上下文、控制、验证和判断权。Ferry 为它提供一条窄的委派接口，
-用于已经配置并明确选择的 provider 和 model。
-它不另起一套 Agent 框架，也不自动路由；provider 和 model 的选择始终明确且由用户掌控。
+Ferry 保留这种选择，既不取代 Codex，也不替你自动选择模型。
 
 > **Ferry work, not judgment. 把工作运出去，不把判断权交出去。**
-
-[阅读 Ferry Thesis →](THESIS.md)
 
 ![Codex 担任 lead，Ferry 为边界明确的工作提供委派接口](diagrams/ferry-cost-control.svg)
 
