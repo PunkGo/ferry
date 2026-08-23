@@ -12,12 +12,25 @@
   <a href="https://pypi.org/project/ferry-codex/"><img alt="PyPI" src="https://img.shields.io/pypi/v/ferry-codex"></a>
 </p>
 
-Ferry 让 Codex 把边界明确的实现任务委派给原生 worker，或你已经配置好的
-custom model。主 Codex session 保留项目上下文、控制工作并作出最终判断。
+Ferry 让 Codex 把边界明确的实现任务委派给你已经配置好的 custom model。主
+Codex session 保留项目上下文、控制工作并作出最终判断。
 
 ## 安装
 
-要求：Python 3.10+、已经安装的 Codex CLI，以及 `uv`（推荐）或 `pipx`。
+最简单的方式是让 Codex 完成 Ferry setup。把这句话粘贴给 Codex：
+
+```text
+Read https://raw.githubusercontent.com/PunkGo/ferry/main/README.md and https://raw.githubusercontent.com/PunkGo/ferry/main/CUSTOM_PROVIDER_SETUP.md. Configure and verify my custom provider first, then install Ferry using the recommended path.
+```
+
+Ferry 用来把 Codex 工作委派给 custom provider 和 model。如果你只需要 Codex
+原生 worker，直接使用 Codex 自带的 worker 即可。
+
+安装 Ferry 前，请先[配置并验证 custom provider](#使用-custom-provider)。它的
+provider、model 和认证必须已经能在 Codex 中正常工作。
+
+如果选择手动安装，需要 Python 3.10+、已经安装的 Codex CLI，以及 `uv`（推荐）
+或 `pipx`。
 
 Ferry 只能选择一个 package manager；默认路径是 `uv tool`：
 
@@ -38,16 +51,8 @@ Python，也不会安装第二份 Codex CLI。
 
 ## 使用
 
-直接用自然语言告诉 Codex 即可，不需要学习 Ferry worker 命令。
-
-委派给 Codex 原生 worker：
-
-```text
-使用 Ferry 把这个边界明确的任务交给原生 worker：更新 parser，运行聚焦测试，
-不要修改无关文件。
-```
-
-委派给已经在 Codex 中跑通的 custom provider：
+Custom provider 在 Codex 中跑通后，直接用自然语言告诉 Codex 即可，不需要学习
+Ferry worker 命令。
 
 ```text
 使用 Ferry，把这个边界明确的实现任务交给我已经配置好的 DeepSeek provider。
@@ -84,12 +89,6 @@ Codex 随后检查真实 diff、执行检查，并决定接受、steer、返工�
 Ferry 不配置模型、endpoint、认证或凭证。Provider、model 和认证必须先在 Codex
 中正常工作，Ferry 才会使用它们。请遵循 Codex 官方的
 [custom provider 配置教程](https://developers.openai.com/codex/config-advanced#custom-model-providers)。
-
-想让 Codex 直接完成配置？把这句话粘贴给 Codex：
-
-```text
-Read https://raw.githubusercontent.com/PunkGo/ferry/main/CUSTOM_PROVIDER_SETUP.md and set up a Codex custom provider for Ferry for me.
-```
 
 明确请求的 provider 缺失、配置错误，或 native identity 不一致时，Ferry 绝不会
 静默换成 owner model。

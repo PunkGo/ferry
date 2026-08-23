@@ -12,14 +12,26 @@
   <a href="https://pypi.org/project/ferry-codex/"><img alt="PyPI" src="https://img.shields.io/pypi/v/ferry-codex"></a>
 </p>
 
-Ferry lets Codex delegate bounded implementation work to native workers or
-custom models you already configured. Your main Codex session keeps the project
-context, controls the work, and makes the final call.
+Ferry lets Codex delegate bounded implementation work to custom models you
+already configured. Your main Codex session keeps the project context, controls
+the work, and makes the final call.
 
 ## Install
 
-Requirements: Python 3.10+, an existing Codex CLI installation, and either `uv`
-(recommended) or `pipx`.
+The easiest path is to let Codex set up Ferry. Paste this into Codex:
+
+```text
+Read https://raw.githubusercontent.com/PunkGo/ferry/main/README.md and https://raw.githubusercontent.com/PunkGo/ferry/main/CUSTOM_PROVIDER_SETUP.md. Configure and verify my custom provider first, then install Ferry using the recommended path.
+```
+
+Ferry is for delegating Codex work to a custom provider and model. If you only
+need native Codex workers, use Codex's built-in worker directly.
+
+Before installing Ferry, [configure and verify a custom provider](#use-a-custom-provider).
+Its provider, model, and authentication must already work in Codex.
+
+For manual setup, requirements are Python 3.10+, an existing Codex CLI
+installation, and either `uv` (recommended) or `pipx`.
 
 Use exactly one package manager for Ferry. `uv tool` is the default path:
 
@@ -41,16 +53,8 @@ not bundle Python or install a second Codex CLI.
 
 ## Use
 
-Ask Codex in natural language. There are no Ferry worker commands to learn.
-
-Delegate to a native Codex worker:
-
-```text
-Use Ferry to delegate this bounded task to a native worker: update the parser,
-run its focused tests, and do not touch unrelated files.
-```
-
-Delegate to a custom provider that already works in Codex:
+After your custom provider works in Codex, ask Codex in natural language. There
+are no Ferry worker commands to learn.
 
 ```text
 Use Ferry with my configured DeepSeek provider for this bounded implementation.
@@ -88,12 +92,6 @@ rework, interrupt, or stop the worker.
 Ferry does not configure models, endpoints, authentication, or credentials. The
 provider, model, and authentication must already work in Codex before Ferry uses
 them. Follow the official [Codex custom-provider guide](https://developers.openai.com/codex/config-advanced#custom-model-providers).
-
-Want Codex to handle the setup? Paste this into Codex:
-
-```text
-Read https://raw.githubusercontent.com/PunkGo/ferry/main/CUSTOM_PROVIDER_SETUP.md and set up a Codex custom provider for Ferry for me.
-```
 
 Ferry never silently substitutes the owner model when an explicitly requested
 provider is missing, misconfigured, or reports a different native identity.
