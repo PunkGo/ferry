@@ -6,14 +6,38 @@ import shutil
 import os
 from pathlib import Path
 from contextlib import asynccontextmanager
-from typing import Any, Callable
+from typing import Annotated, Any, Callable
 
 from mcp.server import MCPServer
 from openai_codex import ApprovalMode, AsyncCodex, CodexConfig, Sandbox
+from pydantic import Field
 
 from . import __version__
-from .adapter import FerryAdapter
+from .adapter import ALLOWED_SANDBOXES, MAX_EVENTS, MAX_TEXT, MAX_WAIT_MS, FerryAdapter
 from .advisory import UpdateAdvisory
+
+
+ThreadId = Annotated[str, Field(json_schema_extra={"minLength": 1, "maxLength": MAX_TEXT},
+    description=f"Exact non-whitespace thread ID returned by start or follow-up, at most {MAX_TEXT} characters.")]
+TurnId = Annotated[str, Field(json_schema_extra={"minLength": 1, "maxLength": MAX_TEXT},
+    description=f"Exact non-whitespace current turn ID returned by start or follow-up, at most {MAX_TEXT} characters.")]
+Cwd = Annotated[str, Field(json_schema_extra={"minLength": 1, "maxLength": MAX_TEXT},
+    description=f"Non-whitespace existing absolute worktree directory, at most {MAX_TEXT} characters.")]
+Provider = Annotated[str, Field(json_schema_extra={"minLength": 1, "maxLength": MAX_TEXT},
+    description=f"Non-whitespace configured provider name, at most {MAX_TEXT} characters.")]
+Model = Annotated[str, Field(json_schema_extra={"minLength": 1, "maxLength": MAX_TEXT},
+    description=f"Non-whitespace configured model name when supplied, at most {MAX_TEXT} characters.")]
+Brief = Annotated[str, Field(json_schema_extra={"minLength": 1, "maxLength": MAX_TEXT},
+    description=f"Non-whitespace bounded worker brief, at most {MAX_TEXT} characters.")]
+Correction = Annotated[str, Field(json_schema_extra={"minLength": 1, "maxLength": MAX_TEXT},
+    description=f"Non-whitespace correction for the exact active turn, at most {MAX_TEXT} characters.")]
+SandboxName = Annotated[str, Field(json_schema_extra={"enum": list(ALLOWED_SANDBOXES)},
+    description="Sandbox for the next start or follow-up; one of the supported modes.")]
+TimeoutMs = Annotated[int, Field(json_schema_extra={"minimum": 1, "maximum": MAX_WAIT_MS},
+    description="Milliseconds for one bounded wait; reserves native-liveness time.")]
+MaxEvents = Annotated[int, Field(json_schema_extra={"minimum": 1, "maximum": MAX_EVENTS},
+    description="Retained events returned by one wait.")]
+FailureGuidance = "On ok:false inspect error.code, error.operation, error.message, optional error.cause, and top-level events."
 
 
 def _sandbox(name: str) -> Sandbox:
@@ -69,7 +93,9 @@ def create_server(adapter_factory: Callable[[], FerryAdapter] = _production_adap
                 state.pop("adapter", None)
                 state.pop("advisory", None)
 
-    server = MCPServer("ferry", version=os.environ.get("FERRY_BUILD_VERSION", __version__), instructions="Explicit alternate-provider Codex worker control.",
+    server = MCPServer("ferry", version=os.environ.get("FERRY_BUILD_VERSION", __version__), instructions=(
+        "Lifecycle: worker_start, then worker_wait; optionally steer or interrupt only after that exact turn is active; "
+        "observe terminal before worker_follow_up on the same thread. " + FailureGuidance),
                        lifespan=lifespan)
 
     def adapter() -> FerryAdapter:
@@ -82,31 +108,31 @@ def create_server(adapter_factory: Callable[[], FerryAdapter] = _production_adap
         return advisory.add_to(result) if advisory is not None else result
 
 
-    @server.tool(description="Start one explicit alternate-provider worker turn.")
-    async def worker_start(cwd: str, provider: str, brief: str, model: str | None = None,
-                           sandbox: str = "read-only") -> dict[str, Any]:
+    @server.tool(description="Start one explicit alternate-provider turn; returns starting, so call worker_wait before live control. " + FailureGuidance)
+    async def worker_start(cwd: Cwd, provider: Provider, brief: Brief, model: Model | None = None,
+                           sandbox: SandboxName = "read-only") -> dict[str, Any]:
         return response(await adapter().worker_start(cwd, provider, brief, model, sandbox))
 
 
-    @server.tool(description="Consume one bounded native stream segment.")
-    async def worker_wait(thread_id: str, turn_id: str, timeout_ms: int = 500,
-                          max_events: int = 1) -> dict[str, Any]:
+    @server.tool(description="Consume one bounded stream segment; control only after this exact turn reports active, and follow-up only after terminal. " + FailureGuidance)
+    async def worker_wait(thread_id: ThreadId, turn_id: TurnId, timeout_ms: TimeoutMs = 500,
+                          max_events: MaxEvents = 1) -> dict[str, Any]:
         return response(await adapter().worker_wait(thread_id, turn_id, timeout_ms, max_events))
 
 
-    @server.tool(description="Steer the one currently-live native turn.")
-    async def worker_steer(thread_id: str, turn_id: str, correction: str) -> dict[str, Any]:
+    @server.tool(description="Steer the exact currently-live turn only after worker_wait reports active; preserve a native control failure. " + FailureGuidance)
+    async def worker_steer(thread_id: ThreadId, turn_id: TurnId, correction: Correction) -> dict[str, Any]:
         return response(await adapter().worker_steer(thread_id, turn_id, correction))
 
 
-    @server.tool(description="Interrupt the one currently-live native turn.")
-    async def worker_interrupt(thread_id: str, turn_id: str) -> dict[str, Any]:
+    @server.tool(description="Interrupt the exact currently-live turn only after worker_wait reports active; use only a real stop or redirect. " + FailureGuidance)
+    async def worker_interrupt(thread_id: ThreadId, turn_id: TurnId) -> dict[str, Any]:
         return response(await adapter().worker_interrupt(thread_id, turn_id))
 
 
-    @server.tool(description="Resume a completed native thread and start its next turn.")
-    async def worker_follow_up(thread_id: str, provider: str, brief: str, cwd: str,
-                               model: str | None = None, sandbox: str = "read-only") -> dict[str, Any]:
+    @server.tool(description="Start the next turn on the exact same thread only after terminal completion is observed. " + FailureGuidance)
+    async def worker_follow_up(thread_id: ThreadId, provider: Provider, brief: Brief, cwd: Cwd,
+                               model: Model | None = None, sandbox: SandboxName = "read-only") -> dict[str, Any]:
         return response(await adapter().worker_follow_up(thread_id, provider, brief, cwd, model, sandbox))
     return server
 

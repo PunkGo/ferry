@@ -17,6 +17,11 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 
 ROOT = Path(__file__).resolve().parents[1]
 ERRLOG = tempfile.TemporaryFile(mode="w+")
+sys.path.insert(0, str(ROOT / "plugins" / "ferry" / "src"))
+
+from ferry_mcp.adapter import ALLOWED_SANDBOXES, MAX_EVENTS, MAX_TEXT, MAX_WAIT_MS, FerryAdapter
+from ferry_mcp.server import FailureGuidance, _sandbox
+from fake_server import Client
 
 
 @asynccontextmanager
@@ -27,8 +32,8 @@ async def connected(extra_env: dict[str, str] | None = None):
     params = StdioServerParameters(command=sys.executable, args=["-m", "tests.fake_server"], cwd=ROOT, env=environment)
     async with stdio_client(params, errlog=ERRLOG) as (read, write):
         async with ClientSession(read, write) as session:
-            await session.initialize()
-            yield session
+            initialized = await session.initialize()
+            yield session, initialized
 
 
 async def call(session: ClientSession, name: str, **arguments: object) -> dict:
@@ -37,10 +42,61 @@ async def call(session: ClientSession, name: str, **arguments: object) -> dict:
 
 
 async def main() -> None:
-    async with connected() as session:
+    server_ast = ast.parse((ROOT / "plugins" / "ferry" / "src" / "ferry_mcp" / "server.py").read_text())
+    assert not any(isinstance(argument, ast.Starred) for subscript in ast.walk(server_ast)
+                   if isinstance(subscript, ast.Subscript) for argument in ast.walk(subscript.slice))
+    async with connected() as (session, initialized):
             tools = await session.list_tools()
             assert {tool.name for tool in tools.tools} == {
                 "worker_start", "worker_wait", "worker_steer", "worker_interrupt", "worker_follow_up"}
+            schemas = {tool.name: tool.input_schema for tool in tools.tools}
+            assert initialized.instructions is not None and "worker_start, then worker_wait" in initialized.instructions
+            assert FailureGuidance in initialized.instructions
+            tool_guidance = {
+                "worker_start": "returns starting, so call worker_wait before live control",
+                "worker_wait": "control only after this exact turn reports active, and follow-up only after terminal",
+                "worker_steer": "only after worker_wait reports active",
+                "worker_interrupt": "only after worker_wait reports active",
+                "worker_follow_up": "only after terminal completion is observed",
+            }
+            for tool in tools.tools:
+                assert tool_guidance[tool.name] in tool.description and FailureGuidance in tool.description
+            expected_required = {
+                "worker_start": ["cwd", "provider", "brief"],
+                "worker_wait": ["thread_id", "turn_id"],
+                "worker_steer": ["thread_id", "turn_id", "correction"],
+                "worker_interrupt": ["thread_id", "turn_id"],
+                "worker_follow_up": ["thread_id", "provider", "brief", "cwd"],
+            }
+            assert {name: schema["required"] for name, schema in schemas.items()} == expected_required
+            text_fields = {
+                "worker_start": {"cwd": f"Non-whitespace existing absolute worktree directory, at most {MAX_TEXT} characters.", "provider": f"Non-whitespace configured provider name, at most {MAX_TEXT} characters.", "brief": f"Non-whitespace bounded worker brief, at most {MAX_TEXT} characters.", "model": f"Non-whitespace configured model name when supplied, at most {MAX_TEXT} characters."},
+                "worker_wait": {"thread_id": f"Exact non-whitespace thread ID returned by start or follow-up, at most {MAX_TEXT} characters.", "turn_id": f"Exact non-whitespace current turn ID returned by start or follow-up, at most {MAX_TEXT} characters."},
+                "worker_steer": {"thread_id": f"Exact non-whitespace thread ID returned by start or follow-up, at most {MAX_TEXT} characters.", "turn_id": f"Exact non-whitespace current turn ID returned by start or follow-up, at most {MAX_TEXT} characters.", "correction": f"Non-whitespace correction for the exact active turn, at most {MAX_TEXT} characters."},
+                "worker_interrupt": {"thread_id": f"Exact non-whitespace thread ID returned by start or follow-up, at most {MAX_TEXT} characters.", "turn_id": f"Exact non-whitespace current turn ID returned by start or follow-up, at most {MAX_TEXT} characters."},
+                "worker_follow_up": {"thread_id": f"Exact non-whitespace thread ID returned by start or follow-up, at most {MAX_TEXT} characters.", "provider": f"Non-whitespace configured provider name, at most {MAX_TEXT} characters.", "brief": f"Non-whitespace bounded worker brief, at most {MAX_TEXT} characters.", "cwd": f"Non-whitespace existing absolute worktree directory, at most {MAX_TEXT} characters.", "model": f"Non-whitespace configured model name when supplied, at most {MAX_TEXT} characters."},
+            }
+            for tool_name, fields in text_fields.items():
+                for field_name, description in fields.items():
+                    field = schemas[tool_name]["properties"][field_name]
+                    if field_name == "model":
+                        assert field["default"] is None and field["anyOf"][1] == {"type": "null"}
+                        field = field["anyOf"][0]
+                    assert field["type"] == "string" and field["minLength"] == 1 and field["maxLength"] == MAX_TEXT
+                    assert field["description"] == description
+            wait_properties = schemas["worker_wait"]["properties"]
+            assert wait_properties["timeout_ms"] == {"default": 500, "description": "Milliseconds for one bounded wait; reserves native-liveness time.", "maximum": MAX_WAIT_MS, "minimum": 1, "title": "Timeout Ms", "type": "integer"}
+            assert wait_properties["max_events"] == {"default": 1, "description": "Retained events returned by one wait.", "maximum": MAX_EVENTS, "minimum": 1, "title": "Max Events", "type": "integer"}
+            for tool_name in ("worker_start", "worker_follow_up"):
+                sandbox = schemas[tool_name]["properties"]["sandbox"]
+                assert sandbox["default"] == "read-only" and sandbox["enum"] == list(ALLOWED_SANDBOXES)
+                assert sandbox["description"] == "Sandbox for the next start or follow-up; one of the supported modes."
+
+            runtime_adapter = FerryAdapter(Client(), _sandbox)
+            runtime_start = await runtime_adapter.worker_start(str(ROOT), "openai", "runtime", None, "read-only")
+            runtime_too_many = await runtime_adapter.worker_wait(runtime_start["thread_id"], runtime_start["turn_id"], 100, 100)
+            assert runtime_too_many["error"]["code"] == "INVALID_ARGUMENT"
+            await runtime_adapter.close()
 
             invalid = await call(session, "worker_start", cwd="relative", provider="openai", brief="x")
             assert invalid["error"]["code"] == "INVALID_CWD"
@@ -55,6 +111,8 @@ async def main() -> None:
             assert start["requested_model"] is None and start["observed_model"] is None
             assert start["model_verification"] == "not_available"
             assert start["model_verification_reason"] == "codex_thread_metadata_not_available"
+            public_too_many = await call(session, "worker_wait", thread_id=start["thread_id"], turn_id=start["turn_id"], timeout_ms=100, max_events=100)
+            assert public_too_many["error"]["code"] == "INVALID_ARGUMENT"
             immediate_interrupt = await call(session, "worker_interrupt", thread_id=start["thread_id"], turn_id=start["turn_id"])
             assert immediate_interrupt["error"]["code"] == "SDK_OPERATION_FAILED"
             assert immediate_interrupt["error"]["cause"] == "native active turn is not registered"
@@ -89,6 +147,20 @@ async def main() -> None:
             assert backlog["status"] == "terminal_pending" and len(backlog["events"]) == 1
             drained = await call(session, "worker_wait", thread_id=idle_backlog["thread_id"], turn_id=idle_backlog["turn_id"], timeout_ms=10, max_events=4)
             assert drained["status"] == "terminal" and drained["native_status"] == "completed"
+            reasoning_noise = await call(session, "worker_start", cwd=str(ROOT), provider="openai", brief="reasoning-noise")
+            noise_started = await call(session, "worker_wait", thread_id=reasoning_noise["thread_id"], turn_id=reasoning_noise["turn_id"], timeout_ms=20, max_events=1)
+            assert noise_started["status"] == "active" and [event["method"] for event in noise_started["events"]] == ["turn/started"]
+            before = asyncio.get_running_loop().time()
+            noise_retained = await call(session, "worker_wait", thread_id=reasoning_noise["thread_id"], turn_id=reasoning_noise["turn_id"], timeout_ms=100, max_events=1)
+            assert asyncio.get_running_loop().time() - before < 0.5
+            assert noise_retained["status"] == "active" and [event["method"] for event in noise_retained["events"]] == ["item/agentMessage/delta"]
+            noise_terminal = await call(session, "worker_wait", thread_id=reasoning_noise["thread_id"], turn_id=reasoning_noise["turn_id"], timeout_ms=20, max_events=7)
+            assert noise_terminal["status"] == "terminal" and [event["method"] for event in noise_terminal["events"]] == ["item/plan/delta", "item/commandExecution/outputDelta", "turn/plan/updated", "thread/tokenUsage/updated", "warning", "item/updated", "turn/completed"]
+            reasoning_failure = await call(session, "worker_start", cwd=str(ROOT), provider="openai", brief="reasoning-failed-terminal")
+            await call(session, "worker_wait", thread_id=reasoning_failure["thread_id"], turn_id=reasoning_failure["turn_id"], timeout_ms=20, max_events=1)
+            retained_failure = await call(session, "worker_wait", thread_id=reasoning_failure["thread_id"], turn_id=reasoning_failure["turn_id"], timeout_ms=100, max_events=4)
+            assert retained_failure["error"]["code"] == "TURN_FAILED" and retained_failure["error"]["native_error"] == "{'message': 'reasoning failure cause'}"
+            assert [event["method"] for event in retained_failure["events"]] == ["error", "item/updated", "turn/completed"]
             read_failure = await call(session, "worker_start", cwd=str(ROOT), provider="openai", brief="native-read-failure")
             failed_read = await call(session, "worker_wait", thread_id=read_failure["thread_id"], turn_id=read_failure["turn_id"], timeout_ms=10, max_events=1)
             assert failed_read["error"]["code"] == "SDK_OPERATION_FAILED"
@@ -177,12 +249,12 @@ async def main() -> None:
             assert occupied["error"]["code"] == "ACTIVE_TURN_EXISTS"
             recovered = await call(session, "worker_interrupt", thread_id=failed["thread_id"], turn_id=failed["turn_id"])
             assert recovered["ok"]
-    async with connected() as restarted:
+    async with connected() as (restarted, _):
         lost = await call(restarted, "worker_steer", thread_id=abandoned["thread_id"], turn_id=abandoned["turn_id"], correction="x")
         assert lost["error"]["code"] == "LIVE_HANDLE_UNAVAILABLE"
         resumed = await call(restarted, "worker_follow_up", thread_id=start["thread_id"], provider="openai", cwd=str(ROOT), brief="after restart")
         assert resumed["ok"] and resumed["thread_id"] == start["thread_id"]
-    async with connected({"FERRY_FAKE_BROKEN_ADVISORY": "1"}) as optional_advisory_failure:
+    async with connected({"FERRY_FAKE_BROKEN_ADVISORY": "1"}) as (optional_advisory_failure, _):
         assert len((await optional_advisory_failure.list_tools()).tools) == 5
     ERRLOG.seek(0)
     assert "controlled terminal stream failure" in ERRLOG.read()

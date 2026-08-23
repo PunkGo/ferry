@@ -75,6 +75,14 @@ class Thread:
   if brief=="cleanup-failure": turn.cleanup_failure=True; turn.queue.put_nowait(Event("turn/completed", {"status":Status.completed}))
   if brief=="idle-backlog":
    self.liveness="idle"; turn.queue.put_nowait(Event("item/updated", {"queued":True})); turn.queue.put_nowait(Event("turn/completed", {"status":Status.completed}))
+  if brief=="reasoning-noise":
+   for _ in range(64):
+    turn.queue.put_nowait(Event("item/reasoning/textDelta", {"text":"noise"})); turn.queue.put_nowait(Event("item/reasoning/summaryTextDelta", {"text":"noise"}))
+   turn.queue.put_nowait(Event("item/agentMessage/delta", {"text":"retained"})); turn.queue.put_nowait(Event("item/plan/delta", {"text":"retained"})); turn.queue.put_nowait(Event("item/commandExecution/outputDelta", {"text":"retained"})); turn.queue.put_nowait(Event("turn/plan/updated", {"plan":[]})); turn.queue.put_nowait(Event("thread/tokenUsage/updated", {"total":1})); turn.queue.put_nowait(Event("warning", {"message":"retained"})); turn.queue.put_nowait(Event("item/updated", {"retained":True})); turn.queue.put_nowait(Event("turn/completed", {"status":Status.completed}))
+  if brief=="reasoning-failed-terminal":
+   for _ in range(64):
+    turn.queue.put_nowait(Event("item/reasoning/textDelta", {"text":"noise"})); turn.queue.put_nowait(Event("item/reasoning/summaryTextDelta", {"text":"noise"}))
+   turn.queue.put_nowait(Event("error", {"error":{"message":"reasoning failure cause"}})); turn.queue.put_nowait(Event("item/updated", {"retained":True})); turn.queue.put_nowait(Event("turn/completed", {"status":Status.failed,"error":{"message":"reasoning failure cause"}}))
   if brief=="liveness-transition":
    turn.queue.put_nowait(Event("thread/status/idle", {})); turn.queue.put_nowait(Event("turn/completed", {"status":Status.completed}))
   if brief=="native-read-failure": self.read_failure=True

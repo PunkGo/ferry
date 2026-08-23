@@ -15,7 +15,7 @@ MAX_EVENTS = 16
 MAX_EVENT_TEXT = 4_096
 MIN_LIVENESS_READ_RESERVE_S = 0.001
 MAX_LIVENESS_READ_RESERVE_S = 0.050
-ALLOWED_SANDBOXES = {"read-only", "workspace-write", "danger-full-access"}
+ALLOWED_SANDBOXES = ("read-only", "workspace-write", "danger-full-access")
 
 
 class FerryFailure(Exception):
@@ -224,7 +224,7 @@ class FerryAdapter:
             deadline = asyncio.get_running_loop().time() + timeout_seconds
             stream_deadline = deadline - min(MAX_LIVENESS_READ_RESERVE_S,
                                              max(MIN_LIVENESS_READ_RESERVE_S, timeout_seconds / 4))
-            for _ in range(max_events):
+            while len(events) < max_events:
                 if live.next_event is None:
                     live.next_event = asyncio.create_task(anext(live.stream))
                 remaining = stream_deadline - asyncio.get_running_loop().time()
@@ -237,7 +237,8 @@ class FerryAdapter:
                 live.next_event = None
                 method = getattr(event, "method", type(event).__name__)
                 payload = getattr(event, "payload", None)
-                events.append({"method": method, "payload": _bounded(payload)})
+                if method not in ("item/reasoning/textDelta", "item/reasoning/summaryTextDelta"):
+                    events.append({"method": method, "payload": _bounded(payload)})
                 if method == "turn/started":
                     live.turn_started = True
                 if method == "turn/completed":

@@ -32,7 +32,17 @@ mcp_version = next(node.value.value for node in mcp_module.body
                    if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "__version__"
                                                            for target in node.targets)
                    if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str))
+assert PUBLIC_VERSION == "0.1.4"
 assert project_version == plugin_version == mcp_version == PUBLIC_VERSION
+skill_contract = (PLUGIN / "skills" / "ferry" / "SKILL.md").read_text()
+for required in (
+    "platform-appropriate long read-only\ncommand turns for steer and interrupt",
+    "`CommandExecutionThreadItem` whose status is `inProgress`",
+    "same\nowner tool execution",
+    "native acknowledgement and terminal effect",
+    "do not add an atomic Doctor operation, queue, retry,\nor fallback",
+):
+    assert required in skill_contract
 
 
 FAKE = '''#!/usr/bin/env python3

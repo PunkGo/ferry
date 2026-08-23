@@ -47,6 +47,14 @@ duplicate Doctor.
 
 If the user asks for readiness or `doctor`, run Doctor before normal delegation.
 
+For the MCP route, `worker_wait` consumes but omits exactly
+`item/reasoning/textDelta` and `item/reasoning/summaryTextDelta`. Its
+`max_events` limit counts only returned retained events; the existing deadline
+and reserved native liveness read remain authoritative. Agent-message, plan,
+lifecycle, tool, completion, usage, warning, and error events remain observable
+and exactly-once even when a typed failure is returned. Do not aggregate deltas,
+add a queue or configuration flag, or change the public tool surface.
+
 ## Delegate
 
 1. Read repository authority. Resolve the exact absolute worktree and capture Git identity and porcelain state when Git is available.
@@ -86,12 +94,35 @@ requested/observed model evidence through `worker_start`; missing observed model
 metadata is `not_available`, not evidence of fallback or a blocker by itself.
 Run one bounded no-mutation nonce turn, then two distinct sequential read-only
 command-tool continuations (each with its exact call/output identifiers), then
-a same-thread follow-up nonce. Use separate long turns for steer and interrupt,
-attempting either only after `worker_wait` reports `active` readiness. Preserve
-Git `HEAD`, tree, and porcelain and require nonzero checks. Model prose is never
+a same-thread follow-up nonce. Use separate platform-appropriate long read-only
+command turns for steer and interrupt. Each command must delay before emitting
+its distinct original/forbidden completion marker (for example, on POSIX use
+`sleep` followed by `printf`, and on Windows use `Start-Sleep` followed by
+`Write-Output`); it must not write the worktree. For each control probe,
+repeatedly make bounded `worker_wait` calls until the exact turn has both the
+normal `active` readiness evidence and a native
+`CommandExecutionThreadItem` whose status is `inProgress`. `turn/started` plus
+native `active` alone is not sufficient timing evidence for Doctor.
+
+When the Codex host can compose MCP calls, make the final qualifying
+`worker_wait` and its matching `worker_steer` or `worker_interrupt` in the same
+owner tool execution: dispatch control immediately from that observed event,
+without model deliberation in the live-control window. Use the existing five
+public MCP operations only; do not add an atomic Doctor operation, queue, retry,
+or fallback. Preserve the owner-attributed timestamps for the qualifying event,
+control dispatch, native acknowledgement, and terminal result. A control failure
+retains its exact native phase, timestamps, and owner; never reinterpret a stale
+snapshot as an adapter failure.
+
+Require both native acknowledgement and terminal effect. Steer must return its
+native acknowledgement, produce the corrected nonce, and exclude the original
+completion marker. Interrupt must return its native acknowledgement, reach
+native `interrupted`, and exclude its forbidden completion marker. Preserve Git
+`HEAD`, tree, and porcelain and require nonzero checks. Model prose is never
 provider proof. Missing provider/auth, mismatch, wrong worktree, failed required
-tool continuation or control, a failed turn, zero executed checks, or Git
-mutation is `BLOCKED` and retains the original cause.
+tool continuation or control, missing acknowledgement or terminal effect, a
+failed turn, zero executed checks, or Git mutation is `BLOCKED` and retains the
+original cause.
 
 If a tool continuation fails, make one read-only native-rollout check. A missing
 or mismatched call/output before provider submission belongs to the Codex/App
