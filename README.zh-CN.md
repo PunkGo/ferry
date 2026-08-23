@@ -48,6 +48,9 @@ Ferry 通过 SDK 启动 App Server 时不会选择 CLI profile，因此所需的
 `codex --profile name` 下通过，却对 Ferry 不可见。profile 仍可选择 model、
 推理强度或模型目录，但共享的 provider/auth 定义应放在基础配置中。
 
+需要引导式交接时，把这份 [custom-provider 配置提示词](CUSTOM_PROVIDER_SETUP.md)
+交给 Codex。
+
 ### DeepSeek 示例
 
 按照 Codex 教程和 DeepSeek 官方的
@@ -69,7 +72,16 @@ provider 缺失、配置错误，或 native provider identity 不一致时，Fer
 
 ## 安装
 
-要求：Python 3.10+、`pipx`，以及已经安装的 Codex CLI。
+要求：Python 3.10+、`uv`，以及已经安装的 Codex CLI。
+
+Ferry 只能选择一个 package manager；默认路径是 `uv tool`：
+
+```sh
+uv tool install ferry-codex
+ferry setup
+```
+
+`pipx` 仍是支持的替代方案；不要让两个 manager 同时安装同一个 Ferry package。
 
 ```sh
 pipx install ferry-codex
@@ -119,6 +131,16 @@ ferry status
 升级或卸载前，先关闭所有正在使用 Ferry 的 Codex session。
 
 ```sh
+uv tool upgrade ferry-codex && ferry setup
+```
+
+```sh
+ferry uninstall && uv tool uninstall ferry-codex
+```
+
+使用受支持的 `pipx` 替代方案时，执行：
+
+```sh
 pipx upgrade ferry-codex && ferry setup
 ```
 
@@ -131,7 +153,7 @@ provider 配置、凭证或项目文件。
 
 ## 支持与安全
 
-Ferry 已经为 native worker、OpenAI、DeepSeek、steer、interrupt、pipx 生命周期和
+Ferry 已经为 native worker、OpenAI、DeepSeek、steer、interrupt、uv/pipx 生命周期和
 Windows 路径保存了带版本边界的 conformance evidence。精确测试矩阵见
 [SUPPORT.md](SUPPORT.md)。
 

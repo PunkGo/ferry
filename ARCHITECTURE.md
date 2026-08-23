@@ -1,6 +1,6 @@
 # Ferry architecture
 
-Status: Ferry's worker and pipx distribution gates are proved on macOS and native Windows with Codex 0.149.0, including clean standard artifacts, lifecycle control, upgrade, provider, and installed-entry advisory coverage. Ferry is ready for public release; publication remains an explicit operator-controlled action.
+Status: Ferry's worker, uv, and pipx distribution gates are proved on macOS and native Windows with Codex 0.149.0, including clean standard artifacts, lifecycle control, upgrade, provider, and installed-entry advisory coverage. Ferry is ready for public release; publication remains an explicit operator-controlled action.
 
 ## Product thesis
 
@@ -47,13 +47,17 @@ Ferry has no `ferry.toml` and no model alias registry. Provider definitions, end
 
 Ferry requires a user-installed Python 3.10+ runtime and reuses the user's existing `codex` executable. It does not bundle a Python interpreter or the Python SDK's pinned second copy of the Codex CLI.
 
-Ferry's only public installation path is `pipx install ferry-codex`, followed by
-`ferry setup`. pipx owns the isolated Ferry environment; setup installs the pinned
-Python SDK without `openai-codex-cli-bin`, registers the complete plugin through
-official `codex plugin` commands, and requires a fresh Codex session for discovery.
-Setup owns dependency installation only. It does not edit provider configuration,
-credentials, project files, or task state. Doctor remains read-only and never
-installs or repairs dependencies.
+Ferry supports exactly one package manager per installation: `uv tool install
+ferry-codex` is the default and `pipx install ferry-codex` is the supported
+alternative, each followed by `ferry setup`. The selected manager owns the
+isolated Ferry environment. Setup first uses its available `pip`; for a pip-less
+pipx environment it uses the validated pipx receipt, otherwise it invokes
+`uv --no-config pip install --python <running executable> --no-deps
+openai-codex==0.147.0`. It installs no `openai-codex-cli-bin`, registers the
+complete plugin through official `codex plugin` commands, and requires a fresh
+Codex session for discovery. Setup owns dependency installation only. It does not
+edit provider configuration, credentials, project files, or task state. Doctor
+remains read-only and never installs or repairs dependencies.
 
 ## Existing contracts, not a new protocol
 

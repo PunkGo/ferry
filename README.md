@@ -52,6 +52,9 @@ pass `codex --profile name` while remaining invisible to Ferry. A profile may
 still select the model, reasoning level, or model catalog, but keep the shared
 provider/auth definition in the base config.
 
+For a guided handoff, give Codex this
+[custom-provider setup prompt](CUSTOM_PROVIDER_SETUP.md).
+
 ### DeepSeek example
 
 After following the Codex guide and the official
@@ -75,7 +78,17 @@ different native provider identity.
 
 ## Install
 
-Requirements: Python 3.10+, `pipx`, and an existing Codex CLI installation.
+Requirements: Python 3.10+, `uv`, and an existing Codex CLI installation.
+
+Use exactly one package manager for Ferry. `uv tool` is the default path:
+
+```sh
+uv tool install ferry-codex
+ferry setup
+```
+
+`pipx` remains a supported alternative; do not install the same Ferry package
+with both managers.
 
 ```sh
 pipx install ferry-codex
@@ -126,6 +139,16 @@ ferry status
 Close every Codex session using Ferry before upgrading or uninstalling.
 
 ```sh
+uv tool upgrade ferry-codex && ferry setup
+```
+
+```sh
+ferry uninstall && uv tool uninstall ferry-codex
+```
+
+With the supported `pipx` alternative, use:
+
+```sh
 pipx upgrade ferry-codex && ferry setup
 ```
 
@@ -139,9 +162,9 @@ files.
 
 ## Support and security
 
-Ferry's native-worker, OpenAI, DeepSeek, steer, interrupt, pipx lifecycle, and
-Windows paths have versioned conformance evidence. See [SUPPORT.md](SUPPORT.md)
-for the exact tested matrix.
+Ferry's native-worker, OpenAI, DeepSeek, steer, interrupt, uv/pipx lifecycle,
+and Windows paths have versioned conformance evidence. See
+[SUPPORT.md](SUPPORT.md) for the exact tested matrix.
 
 Report security issues through [SECURITY.md](SECURITY.md). Contributions are
 welcome after reading [CONTRIBUTING.md](CONTRIBUTING.md).
