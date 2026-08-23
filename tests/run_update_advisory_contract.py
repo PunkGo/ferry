@@ -26,6 +26,7 @@ async def main() -> None:
         assert calls == 0
         first = advisory.add_to({"ok": True})
         assert first["advisory"]["code"] == "FERRY_UPDATE_AVAILABLE"
+        assert "uv tool upgrade ferry-codex" in first["advisory"]["message"] and "pipx upgrade ferry-codex" in first["advisory"]["message"]
         assert "advisory" not in advisory.add_to({"ok": True})
 
         stale = root / "stale.json"

@@ -94,7 +94,7 @@ class UpdateAdvisory:
             return result
         self._emitted = True
         return {**result, "advisory": {"code": "FERRY_UPDATE_AVAILABLE",
-                "message": f"Ferry {self._latest} is available; close Ferry-using Codex sessions, then run pipx upgrade ferry-codex && ferry setup.",
+                "message": f"Ferry {self._latest} is available; close Ferry-using Codex sessions, then run uv tool upgrade ferry-codex && ferry setup (or pipx upgrade ferry-codex && ferry setup).",
                 "latest_version": self._latest}}
 
     def _read_cache(self) -> dict[str, Any] | None:
