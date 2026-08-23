@@ -53,7 +53,7 @@ still select the model, reasoning level, or model catalog, but keep the shared
 provider/auth definition in the base config.
 
 For a guided handoff, give Codex this
-[custom-provider setup prompt](CUSTOM_PROVIDER_SETUP.md).
+[custom-provider setup prompt](https://github.com/PunkGo/ferry/blob/main/CUSTOM_PROVIDER_SETUP.md).
 
 ### DeepSeek example
 

@@ -48,7 +48,7 @@ Ferry 通过 SDK 启动 App Server 时不会选择 CLI profile，因此所需的
 `codex --profile name` 下通过，却对 Ferry 不可见。profile 仍可选择 model、
 推理强度或模型目录，但共享的 provider/auth 定义应放在基础配置中。
 
-需要引导式交接时，把这份 [custom-provider 配置提示词](CUSTOM_PROVIDER_SETUP.md)
+需要引导式交接时，把这份 [custom-provider 配置提示词](https://github.com/PunkGo/ferry/blob/main/CUSTOM_PROVIDER_SETUP.md)
 交给 Codex。
 
 ### DeepSeek 示例
