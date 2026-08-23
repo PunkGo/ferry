@@ -48,8 +48,11 @@ Ferry 通过 SDK 启动 App Server 时不会选择 CLI profile，因此所需的
 `codex --profile name` 下通过，却对 Ferry 不可见。profile 仍可选择 model、
 推理强度或模型目录，但共享的 provider/auth 定义应放在基础配置中。
 
-需要引导式交接时，把这份 [custom-provider 配置提示词](https://github.com/PunkGo/ferry/blob/main/CUSTOM_PROVIDER_SETUP.md)
-交给 Codex。
+想让 Codex 直接完成配置？把这句话粘贴给 Codex：
+
+```text
+Read https://raw.githubusercontent.com/PunkGo/ferry/main/CUSTOM_PROVIDER_SETUP.md and set up a Codex custom provider for Ferry for me.
+```
 
 ### DeepSeek 示例
 
@@ -72,7 +75,7 @@ provider 缺失、配置错误，或 native provider identity 不一致时，Fer
 
 ## 安装
 
-要求：Python 3.10+、`uv`，以及已经安装的 Codex CLI。
+要求：Python 3.10+、已经安装的 Codex CLI，以及 `uv`（推荐）或 `pipx`。
 
 Ferry 只能选择一个 package manager；默认路径是 `uv tool`：
 

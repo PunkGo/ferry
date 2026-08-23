@@ -17,5 +17,5 @@ provider, minimal prompt, native thread id, exact observed worktree, and redacte
 problem. If no private advisory channel is available, ask the maintainer for a
 private reporting route without publishing exploit details.
 
-Pre-release support is documented in `SUPPORT.md`. Unproved platform/provider
+Version-scoped support is documented in `SUPPORT.md`. Unproved platform/provider
 rows are not security guarantees.

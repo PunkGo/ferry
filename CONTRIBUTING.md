@@ -1,6 +1,6 @@
 # Contributing
 
-Ferry is intentionally a small Codex Skill bundle that composes native
+Ferry is intentionally a small Codex plugin that composes a Skill, native
 workers, the official Codex SDK/App Server, and the existing worker-brief
 pattern. Changes should make that composition clearer or safer without
 introducing a second scheduler, configuration owner, protocol, or lifecycle.

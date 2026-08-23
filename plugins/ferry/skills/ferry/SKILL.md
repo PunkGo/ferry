@@ -19,8 +19,7 @@ installation path; `pipx install ferry-codex` remains a supported alternative.
 Install Ferry with exactly one manager because their executable directories can
 overlap. Ferry uses the running tool environment's Python, installs its exact tested
 SDK pin without dependencies during setup, and reuses the host `codex`; it never
-bundles a Python runtime or another Codex CLI. Publication is a separate authorized
-action.
+bundles a Python runtime or another Codex CLI.
 
 Before upgrading or uninstalling, close every Ferry-using Codex session. Use
 `uv tool upgrade ferry-codex && ferry setup` (or `pipx upgrade ferry-codex && ferry

@@ -1,6 +1,6 @@
 # Support and proof matrix
 
-Ferry has a public 0.1.1 release. Each row describes only the exact seam, runtime, and platform observed.
+Ferry has a public 0.1.2 release. Each row describes only the exact seam, runtime, and platform observed.
 
 | Path | Platform | Runtime | Result |
 | --- | --- | --- | --- |
@@ -40,4 +40,5 @@ Start a fresh Codex session before use. Setup installs the exact SDK pin without
 Close every Ferry-using Codex session before `ferry uninstall && uv tool
 uninstall ferry-codex` (or the matching `pipx uninstall ferry-codex`). This does
 not delete Codex threads, provider configuration, or credentials. Distribution
-gates are proved; publication remains an explicit operator-controlled action.
+The distribution gates are proved, and Ferry 0.1.2 is published on PyPI from
+Git commit `1baa3460faa0d7180fa55642e1112e063a85377b`.

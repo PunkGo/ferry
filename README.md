@@ -52,8 +52,11 @@ pass `codex --profile name` while remaining invisible to Ferry. A profile may
 still select the model, reasoning level, or model catalog, but keep the shared
 provider/auth definition in the base config.
 
-For a guided handoff, give Codex this
-[custom-provider setup prompt](https://github.com/PunkGo/ferry/blob/main/CUSTOM_PROVIDER_SETUP.md).
+Want Codex to handle the setup? Paste this into Codex:
+
+```text
+Read https://raw.githubusercontent.com/PunkGo/ferry/main/CUSTOM_PROVIDER_SETUP.md and set up a Codex custom provider for Ferry for me.
+```
 
 ### DeepSeek example
 
@@ -78,7 +81,8 @@ different native provider identity.
 
 ## Install
 
-Requirements: Python 3.10+, `uv`, and an existing Codex CLI installation.
+Requirements: Python 3.10+, an existing Codex CLI installation, and either `uv`
+(recommended) or `pipx`.
 
 Use exactly one package manager for Ferry. `uv tool` is the default path:
 
