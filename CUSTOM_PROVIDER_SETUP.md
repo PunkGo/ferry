@@ -1,19 +1,16 @@
 # Set up a Codex custom provider for Ferry
 
-Configure and verify the user's requested custom provider for Ferry. If the
-provider or model is not yet clear, ask for it before changing anything.
-
-First read the current official Codex custom-provider documentation and inspect
-the installed Codex runtime and version. Confirm the provider name, model,
-Responses-compatible endpoint, and credential source.
-
-Modify only Codex-owned user configuration. Do not edit Ferry or project files.
-Do not print, paste, or write a plaintext credential to a file. Do not copy a
-static provider schema: use the current official documentation and the installed
-runtime instead.
-
-Then prove the requested provider and model through an unprofiled Codex seam (no
-`--profile`). Report `Ferry prerequisite satisfied` only after that succeeds,
-including the provider/model and a secret-free verification result.
+1. Identify the provider and model the user wants. Ask only if either is unclear.
+2. Read the current official
+   [Codex custom-provider documentation](https://developers.openai.com/codex/config-advanced#custom-model-providers),
+   then inspect the installed Codex runtime and version. Use the current
+   documentation and runtime rather than a copied provider schema.
+3. Configure only Codex-owned user settings and authentication. Do not edit Ferry
+   or project files, and do not print, paste, or store a plaintext credential.
+4. Verify the requested provider and model through the base Codex seam Ferry
+   uses, without `--profile`. Preserve the exact cause if configuration,
+   authentication, provider identity, or model verification fails.
+5. Report `Ferry prerequisite satisfied` only after verification succeeds.
+   Include the provider, model, and a secret-free verification result.
 
 Ferry does not own provider, endpoint, model, or credential configuration.

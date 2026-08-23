@@ -1,7 +1,7 @@
 # Ferry
 
 <p align="center">
-  <strong>Keep Codex as the lead. Delegate bounded work to your own models.</strong>
+  <strong>Keep Codex. Spend less.</strong>
 </p>
 
 <p align="center">
@@ -12,64 +12,9 @@
   <a href="https://pypi.org/project/ferry-codex/"><img alt="PyPI" src="https://img.shields.io/pypi/v/ferry-codex"></a>
 </p>
 
-Ferry adds controlled worker delegation to Codex. Your main Codex session keeps
-the project context, scopes the task, and judges the result. Bounded execution
-can stay on a native Codex worker or run on an explicitly selected custom model
-such as DeepSeek.
-
-If you like the lead-and-worker feel of Claude Code agent teams, Ferry brings
-that delegation pattern to Codex while letting workers use providers already
-configured on your machine. Ferry is not a second agent harness or a shared
-peer-to-peer team runtime. Codex remains the lead and final judge.
-
-> **Ferry work, not judgment.**
-
-## Why Ferry
-
-Frontier models are worth using for hard reasoning, planning, and review. They
-are not always the economical choice for a bounded implementation task.
-
-Ferry lets you keep the Codex harness you already trust and spend expensive
-model capacity where judgment matters. A lower-cost custom model can implement
-a focused change; Codex then inspects the real diff, runs the checks, and decides
-whether to accept, steer, rework, interrupt, or stop.
-
-![Codex leads while Ferry routes bounded work to a native or custom-model worker](diagrams/ferry-cost-control.svg)
-
-## Before you install: prove the provider in Codex
-
-First, follow the official
-[Codex custom-provider guide](https://developers.openai.com/codex/config-advanced#custom-model-providers)
-to configure and test your provider. Ferry does not configure models, endpoints,
-authentication, or credentials. The exact provider, model, and authentication
-must already work in Codex before Ferry uses them.
-
-Want Codex to handle the setup? Paste this into Codex:
-
-```text
-Read https://raw.githubusercontent.com/PunkGo/ferry/main/CUSTOM_PROVIDER_SETUP.md and set up a Codex custom provider for Ferry for me.
-```
-
-### DeepSeek example
-
-After following the Codex guide and the official
-[DeepSeek Codex guide](https://api-docs.deepseek.com/quick_start/agent_integrations/codex),
-if your base configuration exposes a provider named `deepseek`, verify the same
-unprofiled seam Ferry will use. Replace the model id if your configuration uses
-a different one, and supply authentication through your configured Codex auth
-mechanism.
-
-```sh
-codex exec -s read-only \
-  -c 'model_provider="deepseek"' \
-  -m deepseek-v4-pro \
-  'Reply with exactly DEEPSEEK_CODEX_OK.'
-```
-
-Continue only after this command, without `--profile`, returns
-`DEEPSEEK_CODEX_OK`. Ferry will never silently fall back to the owner model when
-an explicitly requested provider is missing, misconfigured, or reports a
-different native provider identity.
+Ferry lets Codex delegate bounded implementation work to native workers or
+custom models you already configured. Your main Codex session keeps the project
+context, controls the work, and makes the final call.
 
 ## Install
 
@@ -105,12 +50,11 @@ Use Ferry to delegate this bounded task to a native worker: update the parser,
 run its focused tests, and do not touch unrelated files.
 ```
 
-Delegate to the DeepSeek provider you already proved in Codex:
+Delegate to a custom provider that already works in Codex:
 
 ```text
-Use Ferry with my configured DeepSeek provider and deepseek-v4-pro for this
-bounded implementation. Keep this Codex thread as lead and independently verify
-the resulting diff and tests.
+Use Ferry with my configured DeepSeek provider for this bounded implementation.
+Keep this Codex thread as lead and independently verify the resulting diff and tests.
 ```
 
 Correct or stop live work in the same conversation:
@@ -125,6 +69,34 @@ Interrupt the Ferry worker now.
 
 The worker's report is delivery data. Codex checks the actual worktree and runs
 the real acceptance commands before accepting it.
+
+## Why Ferry
+
+Frontier models are worth using for hard reasoning, planning, and review. A
+bounded implementation task does not always need the most expensive model.
+
+Ferry keeps judgment in Codex while a lower-cost custom model handles focused
+execution. Codex can inspect the real diff, run the checks, and accept, steer,
+rework, interrupt, or stop the worker.
+
+> **Ferry work, not judgment.**
+
+![Codex leads while Ferry routes bounded work to a native or custom-model worker](diagrams/ferry-cost-control.svg)
+
+## Use a custom provider
+
+Ferry does not configure models, endpoints, authentication, or credentials. The
+provider, model, and authentication must already work in Codex before Ferry uses
+them. Follow the official [Codex custom-provider guide](https://developers.openai.com/codex/config-advanced#custom-model-providers).
+
+Want Codex to handle the setup? Paste this into Codex:
+
+```text
+Read https://raw.githubusercontent.com/PunkGo/ferry/main/CUSTOM_PROVIDER_SETUP.md and set up a Codex custom provider for Ferry for me.
+```
+
+Ferry never silently substitutes the owner model when an explicitly requested
+provider is missing, misconfigured, or reports a different native identity.
 
 ## Manage the integration
 
