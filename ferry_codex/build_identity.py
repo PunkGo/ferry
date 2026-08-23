@@ -1,6 +1,6 @@
 """Build identity embedded in source and replaced in release artifacts."""
 
-PUBLIC_VERSION = "0.1.4"
+PUBLIC_VERSION = "0.1.5"
 # A release build replaces this with the exact clean source commit.  Keeping the
 # source marker explicit prevents an unpacked checkout from masquerading as an
 # immutable distribution.

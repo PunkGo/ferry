@@ -102,7 +102,11 @@ its distinct original/forbidden completion marker (for example, on POSIX use
 repeatedly make bounded `worker_wait` calls until the exact turn has both the
 normal `active` readiness evidence and a native
 `CommandExecutionThreadItem` whose status is `inProgress`. `turn/started` plus
-native `active` alone is not sufficient timing evidence for Doctor.
+native `active` alone is not sufficient timing evidence for Doctor. Use
+`worker_wait(timeout_ms=30000, max_events=16)` for ordinary progress and terminal
+draining. During control-event discovery, use
+`worker_wait(timeout_ms=30000, max_events=1)` so the first meaningful retained
+event returns immediately.
 
 When the Codex host can compose MCP calls, make the final qualifying
 `worker_wait` and its matching `worker_steer` or `worker_interrupt` in the same
@@ -114,15 +118,20 @@ control dispatch, native acknowledgement, and terminal result. A control failure
 retains its exact native phase, timestamps, and owner; never reinterpret a stale
 snapshot as an adapter failure.
 
-Require both native acknowledgement and terminal effect. Steer must return its
-native acknowledgement, produce the corrected nonce, and exclude the original
-completion marker. Interrupt must return its native acknowledgement, reach
-native `interrupted`, and exclude its forbidden completion marker. Preserve Git
-`HEAD`, tree, and porcelain and require nonzero checks. Model prose is never
-provider proof. Missing provider/auth, mismatch, wrong worktree, failed required
-tool continuation or control, missing acknowledgement or terminal effect, a
-failed turn, zero executed checks, or Git mutation is `BLOCKED` and retains the
-original cause.
+Require both native acknowledgement and terminal effect. Steer must return a
+same-turn native acknowledgement, observe the correction as same-turn input,
+and produce the corrected nonce or result in terminal completion. If the
+already-running command completes after control dispatch, its output is allowed
+and that completion alone is not a steer failure; evaluate the same turn's
+acknowledgement, observed correction input, and corrected terminal result.
+Interrupt must return its native acknowledgement, reach native
+`interrupted`, and exclude its forbidden completion marker. Preserve Git `HEAD`,
+tree, and porcelain and require nonzero checks. Model prose is never provider
+proof. Missing provider/auth, mismatch, wrong worktree, failed required tool
+continuation or control, missing required steer acknowledgement, correction
+observation, corrected terminal result, or interrupt terminal effect, a failed
+turn, zero executed checks, or Git mutation is `BLOCKED` and retains the original
+cause.
 
 If a tool continuation fails, make one read-only native-rollout check. A missing
 or mismatched call/output before provider submission belongs to the Codex/App

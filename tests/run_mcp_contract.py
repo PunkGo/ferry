@@ -45,6 +45,17 @@ async def main() -> None:
     server_ast = ast.parse((ROOT / "plugins" / "ferry" / "src" / "ferry_mcp" / "server.py").read_text())
     assert not any(isinstance(argument, ast.Starred) for subscript in ast.walk(server_ast)
                    if isinstance(subscript, ast.Subscript) for argument in ast.walk(subscript.slice))
+    skill_contract = (ROOT / "plugins" / "ferry" / "skills" / "ferry" / "SKILL.md").read_text()
+    for instruction in (
+        "`worker_wait(timeout_ms=30000, max_events=16)` for ordinary progress and terminal\ndraining",
+        "`worker_wait(timeout_ms=30000, max_events=1)` so the first meaningful retained\nevent returns immediately",
+        "already-running command completes after control dispatch, its output is allowed\nand that completion alone is not a steer failure",
+        "same-turn native acknowledgement, observe the correction as same-turn input,\nand produce the corrected nonce or result in terminal completion",
+    ):
+        assert instruction in skill_contract
+    doctor_steer_contract = skill_contract.split("## Doctor\n", 1)[1].split("\n\nIf a tool continuation fails", 1)[0]
+    assert "exclude the original\ncompletion marker" not in doctor_steer_contract
+    assert "correction input or effect" not in doctor_steer_contract
     async with connected() as (session, initialized):
             tools = await session.list_tools()
             assert {tool.name for tool in tools.tools} == {

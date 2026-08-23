@@ -5,7 +5,7 @@ backend-path = ["."]
 
 [project]
 name = "ferry-codex"
-version = "0.1.4"
+version = "0.1.5"
 description = "Keep Codex as the lead while bounded work runs on your own models."
 readme = "README.md"
 requires-python = ">=3.10"
