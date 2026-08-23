@@ -44,7 +44,7 @@ def create_server(adapter_factory: Callable[[], FerryAdapter] = _production_adap
         try:
             try:
                 advisory = (advisory_factory or (lambda: UpdateAdvisory(
-                    os.environ.get("FERRY_BUILD_VERSION", "0.1.1").split("+", 1)[0])))()
+                    os.environ.get("FERRY_BUILD_VERSION", "0.1.2").split("+", 1)[0])))()
                 await advisory.start()
             except BaseException:
                 if advisory is not None:
@@ -68,7 +68,7 @@ def create_server(adapter_factory: Callable[[], FerryAdapter] = _production_adap
                 state.pop("adapter", None)
                 state.pop("advisory", None)
 
-    server = MCPServer("ferry", version=os.environ.get("FERRY_BUILD_VERSION", "0.1.1"), instructions="Explicit alternate-provider Codex worker control.",
+    server = MCPServer("ferry", version=os.environ.get("FERRY_BUILD_VERSION", "0.1.2"), instructions="Explicit alternate-provider Codex worker control.",
                        lifespan=lifespan)
 
     def adapter() -> FerryAdapter:

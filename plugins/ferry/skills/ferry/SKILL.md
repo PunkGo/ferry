@@ -13,17 +13,22 @@ The current Codex thread is the owner. It alone scopes work, chooses the route, 
 
 When Ferry is installed as `ferry-codex`, its only console integration commands are
 `ferry setup`, `ferry status`, and `ferry uninstall`; `ferry --version` reports the
-embedded build identity. Install with `pipx install ferry-codex`, then run `ferry
-setup` and start a fresh Codex session. `pipx` is Ferry's only public installation
-path. Ferry uses the pipx environment's Python, installs its exact tested SDK pin
-without dependencies during setup, and reuses the host `codex`; it never bundles a
-Python runtime or another Codex CLI. Publication is a separate authorized action.
+embedded build identity. Install with `uv tool install ferry-codex`, then run
+`ferry setup` and start a fresh Codex session. `uv` is the primary public
+installation path; `pipx install ferry-codex` remains a supported alternative.
+Install Ferry with exactly one manager because their executable directories can
+overlap. Ferry uses the running tool environment's Python, installs its exact tested
+SDK pin without dependencies during setup, and reuses the host `codex`; it never
+bundles a Python runtime or another Codex CLI. Publication is a separate authorized
+action.
 
 Before upgrading or uninstalling, close every Ferry-using Codex session. Use
-`pipx upgrade ferry-codex && ferry setup` to reconcile an upgrade, and `ferry
-uninstall && pipx uninstall ferry-codex` for complete removal. These are package
-manager and Codex-plugin lifecycle actions, not worker operations: do not invent a
-Ferry update command, provider configuration command, daemon, or duplicate Doctor.
+`uv tool upgrade ferry-codex && ferry setup` (or `pipx upgrade ferry-codex && ferry
+setup`) to reconcile an upgrade. For complete removal, use `ferry uninstall && uv
+tool uninstall ferry-codex` (or `ferry uninstall && pipx uninstall ferry-codex`).
+These are package-manager and Codex-plugin lifecycle actions, not worker operations:
+do not invent a Ferry update command, provider configuration command, daemon, or
+duplicate Doctor.
 
 ## Choose the route
 

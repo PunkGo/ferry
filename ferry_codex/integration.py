@@ -192,21 +192,27 @@ def install_sdk() -> None:
         run(sys.executable, "-m", "pip", "install", "--no-deps", pin)
     else:
         metadata_path = Path(sys.prefix) / "pipx_metadata.json"
-        if metadata_path.is_symlink() or not metadata_path.is_file():
-            raise IntegrationError("pip is unavailable and this Ferry environment has no valid pipx metadata")
-        try:
-            pipx_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-            environment = pipx_metadata["environment"]
-            package = pipx_metadata["main_package"]["package"]
-        except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
-            raise IntegrationError("pip is unavailable and pipx metadata is malformed") from exc
-        prefix = Path(sys.prefix)
-        if environment != "ferry-codex" or package != "ferry-codex" or prefix.name != environment or prefix.parent.name != "venvs":
-            raise IntegrationError("pipx metadata does not identify this environment as ferry-codex")
-        pipx = shutil.which("pipx")
-        if pipx is None or not Path(pipx).is_file():
-            raise IntegrationError("pip is unavailable and pipx executable was not found on PATH")
-        run(str(Path(pipx).absolute()), "runpip", environment, "install", "--no-deps", pin)
+        if metadata_path.exists() or metadata_path.is_symlink():
+            if metadata_path.is_symlink() or not metadata_path.is_file():
+                raise IntegrationError("pip is unavailable and this Ferry environment has no valid pipx metadata")
+            try:
+                pipx_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+                environment = pipx_metadata["environment"]
+                package = pipx_metadata["main_package"]["package"]
+            except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
+                raise IntegrationError("pip is unavailable and pipx metadata is malformed") from exc
+            prefix = Path(sys.prefix)
+            if environment != "ferry-codex" or package != "ferry-codex" or prefix.name != environment or prefix.parent.name != "venvs":
+                raise IntegrationError("pipx metadata does not identify this environment as ferry-codex")
+            pipx = shutil.which("pipx")
+            if pipx is None or not Path(pipx).is_file():
+                raise IntegrationError("pip is unavailable and pipx executable was not found on PATH")
+            run(str(Path(pipx).absolute()), "runpip", environment, "install", "--no-deps", pin)
+        else:
+            uv = shutil.which("uv")
+            if uv is None or not Path(uv).is_file() or not os.access(uv, os.X_OK):
+                raise IntegrationError("pip is unavailable and no pipx metadata or executable uv was found on PATH")
+            run(str(Path(uv).absolute()), "--no-config", "pip", "install", "--python", sys.executable, "--no-deps", pin)
     _validate_sdk_runtime()
 
 
@@ -442,4 +448,4 @@ def uninstall(*, ferry_home: Path | None = None, codex: str | None = None) -> No
         raise IntegrationError("Codex did not remove ferry@ferry")
     if marketplace.exists():
         shutil.rmtree(marketplace)
-    print("Ferry integration is removed. Close every Ferry-using Codex session, then run pipx uninstall ferry-codex.")
+    print("Ferry integration is removed. Close every Ferry-using Codex session, then run uv tool uninstall ferry-codex or pipx uninstall ferry-codex.")

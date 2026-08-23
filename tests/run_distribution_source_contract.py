@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import shutil
 import subprocess
 import sys
 import tempfile
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -51,6 +54,15 @@ else: raise SystemExit("unexpected fake Codex arguments: " + repr(args))
 '''
 
 
+FAKE_UV = '''#!{python}
+import json, os, sys
+from pathlib import Path
+if os.environ.get("FERRY_UV_FAIL") == "1":
+ sys.stderr.write("FERRY_UV_SENTINEL\\n"); raise SystemExit(37)
+Path(os.environ["FERRY_UV_RECORD"]).write_text(json.dumps([sys.argv[1:], os.getcwd()]))
+'''
+
+
 def state(path: Path, *, marketplace: Path | None = None, plugin: bool = False, enabled: bool = True, version: str = FULL_VERSION,
           fail_after: int | None = None, ignore_plugin_add: bool = False) -> None:
     payload = {"marketplaces": [], "plugins": [], "mutations": 0, "fail_after": fail_after,
@@ -70,7 +82,7 @@ with tempfile.TemporaryDirectory(prefix="ferry-console-") as raw:
     integration.marketplace_file = lambda: MARKETPLACE
     sdk_calls = []
     integration.install_sdk = lambda: sdk_calls.append("install")
-    import os; old = os.environ.get("FERRY_FAKE_STATE"); os.environ["FERRY_FAKE_STATE"] = str(state_file)
+    old = os.environ.get("FERRY_FAKE_STATE"); os.environ["FERRY_FAKE_STATE"] = str(state_file)
     try:
         foreign = temp / "foreign"; foreign.mkdir(); state(state_file, marketplace=foreign)
         assert main(["--ferry-home", str(temp / "foreign-home"), "--codex", str(fake), "setup"]) == 1
@@ -121,7 +133,11 @@ with tempfile.TemporaryDirectory(prefix="ferry-console-") as raw:
         assert main(["--ferry-home", str(home), "--codex", str(fake), "status"]) == 1
         assert main(["--ferry-home", str(home), "--codex", str(fake), "setup"]) == 0
         assert main(["--ferry-home", str(home), "--codex", str(fake), "setup"]) == 0
-        assert main(["--ferry-home", str(home), "--codex", str(fake), "uninstall"]) == 0
+        uninstall_output = StringIO()
+        with redirect_stdout(uninstall_output):
+            assert main(["--ferry-home", str(home), "--codex", str(fake), "uninstall"]) == 0
+        assert "uv tool uninstall ferry-codex" in uninstall_output.getvalue()
+        assert "pipx uninstall ferry-codex" in uninstall_output.getvalue()
         assert main(["--ferry-home", str(home), "--codex", str(fake), "uninstall"]) == 0
         assert not (home / "marketplace").exists()
 
@@ -249,9 +265,10 @@ with tempfile.TemporaryDirectory(prefix="ferry-console-") as raw:
         metadata_path = pipx_prefix / "pipx_metadata.json"
         metadata_path.write_text(json.dumps({"environment": "ferry-codex", "main_package": {"package": "ferry-codex"}}))
         fake_pipx = temp / "pipx"; fake_pipx.write_text(""); fake_pipx.chmod(0o755)
+        fake_uv = temp / "uv"; fake_uv.write_text(""); fake_uv.chmod(0o755)
         integration.sys.prefix = str(pipx_prefix)
         integration.importlib.util.find_spec = lambda _: None
-        integration.shutil.which = lambda name: str(fake_pipx) if name == "pipx" else None
+        integration.shutil.which = lambda name: str(fake_pipx) if name == "pipx" else str(fake_uv) if name == "uv" else None
         commands.clear(); integration.install_sdk()
         assert commands == [(str(fake_pipx.absolute()), "runpip", "ferry-codex", "install", "--no-deps", "openai-codex==0.147.0"), ("validate",)]
 
@@ -269,9 +286,62 @@ with tempfile.TemporaryDirectory(prefix="ferry-console-") as raw:
         try: integration.install_sdk()
         except integration.IntegrationError: pass
         else: raise AssertionError("absent pipx selected an installer")
+        metadata_path.unlink()
+        try: integration.install_sdk()
+        except integration.IntegrationError as error:
+            assert "executable uv" in str(error)
+        else: raise AssertionError("missing uv selected an installer")
+
+        integration.shutil.which = lambda name: str(fake_uv) if name == "uv" else None
+        commands.clear(); integration.install_sdk()
+        assert commands == [(str(fake_uv.absolute()), "--no-config", "pip", "install", "--python", sys.executable, "--no-deps", "openai-codex==0.147.0"), ("validate",)]
+
+        def fail_uv(*args):
+            raise subprocess.CalledProcessError(19, args, stderr="controlled uv stderr")
+        integration.run = fail_uv
+        try: integration.install_sdk()
+        except subprocess.CalledProcessError as error:
+            assert error.returncode == 19 and error.stderr == "controlled uv stderr"
+        else: raise AssertionError("uv subprocess failure lost its cause")
     finally:
         integration.run, integration._validate_sdk_runtime = original_run, original_validate
         integration.importlib.util.find_spec, integration.shutil.which, integration.sys.prefix = original_find_spec, original_which, original_prefix
+
+    # This child process uses the real CLI and installer from a pip-less tool
+    # environment provisioned with only Ferry's required non-pip runtime. It
+    # begins in hostile uv configuration, so only --no-config makes the fake
+    # uv invocation independent of the caller's directory.
+    tool = temp / "uv-tool"; subprocess.run(("uv", "venv", "--python", sys.executable, str(tool)), check=True)
+    tool_python = tool / "bin" / "python"
+    subprocess.run(("uv", "pip", "install", "--python", str(tool_python), "-r", str(ROOT / "plugins" / "ferry" / "requirements.lock")), check=True)
+    subprocess.run(("uv", "pip", "install", "--python", str(tool_python), "--no-deps", "openai-codex==0.147.0"), check=True)
+    pip_probe = subprocess.run((str(tool_python), "-c", "import importlib.util, json, sys; print(json.dumps({'pip_absent': importlib.util.find_spec('pip') is None, 'executable': sys.executable}))"),
+                               check=True, stdout=subprocess.PIPE, text=True)
+    pip_probe_result = json.loads(pip_probe.stdout)
+    assert pip_probe_result["pip_absent"] is True
+    resources = tool / "ferry_codex_resources"
+    shutil.copytree(PLUGIN, resources / "plugins" / "ferry")
+    marketplace_resources = resources / ".agents" / "plugins"; marketplace_resources.mkdir(parents=True)
+    shutil.copyfile(MARKETPLACE, marketplace_resources / "marketplace.json")
+    ferry = temp / "ferry"; ferry.write_text(f"#!{tool_python}\nfrom ferry_codex.cli import main\nraise SystemExit(main())\n"); ferry.chmod(0o755)
+    fake_uv = temp / "uv"; fake_uv.write_text(FAKE_UV.format(python=sys.executable)); fake_uv.chmod(0o755)
+    hostile = temp / "hostile-uv"; hostile.mkdir()
+    (hostile / "uv.toml").write_text('index-url = "https://example.invalid/uv.toml"\n')
+    (hostile / "pyproject.toml").write_text('[tool.uv]\nindex-url = "https://example.invalid/pyproject"\n')
+    record = temp / "uv-record.json"; state(state_file)
+    cli_env = {**os.environ, "FERRY_FAKE_STATE": str(state_file), "FERRY_UV_RECORD": str(record),
+               "PATH": f"{temp}{os.pathsep}{os.environ['PATH']}", "PYTHONPATH": str(ROOT)}
+    completed = subprocess.run((str(ferry), "--ferry-home", str(temp / "uv-home"), "--codex", str(fake), "setup"),
+                               cwd=hostile, env=cli_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    assert completed.returncode == 0 and completed.stderr == "", completed.stderr
+    uv_args, uv_cwd = json.loads(record.read_text())
+    assert uv_args == ["--no-config", "pip", "install", "--python", pip_probe_result["executable"], "--no-deps", "openai-codex==0.147.0"]
+    assert Path(uv_cwd).resolve() == hostile.resolve()
+    state(state_file)
+    failed_env = {**cli_env, "FERRY_UV_FAIL": "1"}
+    failed = subprocess.run((str(ferry), "--ferry-home", str(temp / "uv-failed-home"), "--codex", str(fake), "setup"),
+                            cwd=hostile, env=failed_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    assert failed.returncode == 1 and "FERRY_UV_SENTINEL" in failed.stderr and "CalledProcessError" in failed.stderr, (failed.returncode, failed.stdout, failed.stderr)
 
     failed_codex = temp / "failed-codex"
     failed_codex.write_text("#!/usr/bin/env python3\nimport sys\nsys.stderr.write('controlled Codex stderr\\n')\nraise SystemExit(42)\n")
