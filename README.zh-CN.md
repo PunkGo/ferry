@@ -46,8 +46,13 @@ pipx install ferry-codex
 ferry setup
 ```
 
-随后启动一个新的 Codex session。Ferry 复用宿主 `codex` executable；它不打包
-Python，也不会安装第二份 Codex CLI。
+随后启动一个新的 Codex session，并执行同一真实 seam 的 readiness check：
+
+```text
+Run Ferry Doctor for my configured custom provider and model in this project. Keep it read-only, test the real coding-tool lifecycle, and explain any BLOCKED result by owner.
+```
+
+Ferry 复用宿主 `codex` executable；它不打包 Python，也不会安装第二份 Codex CLI。
 
 ## 使用
 
@@ -88,7 +93,7 @@ Codex 随后检查真实 diff、执行检查，并决定接受、steer、返工�
 
 Ferry 不配置模型、endpoint、认证或凭证。Provider、model 和认证必须先在 Codex
 中正常工作，Ferry 才会使用它们。请遵循 Codex 官方的
-[custom provider 配置教程](https://developers.openai.com/codex/config-advanced#custom-model-providers)。
+[custom provider 配置教程](https://learn.chatgpt.com/docs/config-file/config-advanced#custom-model-providers)。
 
 明确请求的 provider 缺失、配置错误，或 native identity 不一致时，Ferry 绝不会
 静默换成 owner model。

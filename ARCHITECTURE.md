@@ -1,6 +1,6 @@
 # Ferry architecture
 
-Status: Ferry's worker, uv, and pipx distribution gates are proved on macOS and native Windows with Codex 0.149.0, including clean standard artifacts, lifecycle control, upgrade, provider, and installed-entry advisory coverage. Ferry 0.1.2 is published on PyPI from Git commit `1baa3460faa0d7180fa55642e1112e063a85377b`.
+Status: Ferry's worker, uv, and pipx distribution gates are proved on macOS and native Windows with Codex 0.149.0, including clean standard artifacts, lifecycle control, upgrade, provider, and installed-entry advisory coverage. Ferry 0.1.4 is published on PyPI from Git commit `c1306b2c25151d6e0951f6a9f94cb50e8d0c394b`.
 
 ## Product thesis
 

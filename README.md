@@ -48,8 +48,14 @@ pipx install ferry-codex
 ferry setup
 ```
 
-Start a fresh Codex session. Ferry reuses your host `codex` executable; it does
-not bundle Python or install a second Codex CLI.
+Start a fresh Codex session, then run the same-seam readiness check:
+
+```text
+Run Ferry Doctor for my configured custom provider and model in this project. Keep it read-only, test the real coding-tool lifecycle, and explain any BLOCKED result by owner.
+```
+
+Ferry reuses your host `codex` executable; it does not bundle Python or install
+a second Codex CLI.
 
 ## Use
 
@@ -91,7 +97,7 @@ rework, interrupt, or stop the worker.
 
 Ferry does not configure models, endpoints, authentication, or credentials. The
 provider, model, and authentication must already work in Codex before Ferry uses
-them. Follow the official [Codex custom-provider guide](https://developers.openai.com/codex/config-advanced#custom-model-providers).
+them. Follow the official [Codex custom-provider guide](https://learn.chatgpt.com/docs/config-file/config-advanced#custom-model-providers).
 
 Ferry never silently substitutes the owner model when an explicitly requested
 provider is missing, misconfigured, or reports a different native identity.
