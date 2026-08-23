@@ -41,13 +41,6 @@ diff、执行检查，并决定接受、steer、返工、interrupt 或停止。
 配置并验证 provider。Ferry 不配置模型、endpoint、认证或凭证；完全相同的
 provider、model 和 auth 必须先在 Codex 中正常工作，Ferry 才会使用它们。
 
-Ferry 通过 SDK 启动 App Server 时不会选择 CLI profile，因此所需的 provider
-和认证必须能从基础用户配置（通常是 `~/.codex/config.toml`）读取。Codex
-0.134.0 及以上版本中，`--profile name` 会叠加
-`~/.codex/name.config.toml`；如果 provider 只定义在该 profile 中，它可能在
-`codex --profile name` 下通过，却对 Ferry 不可见。profile 仍可选择 model、
-推理强度或模型目录，但共享的 provider/auth 定义应放在基础配置中。
-
 想让 Codex 直接完成配置？把这句话粘贴给 Codex：
 
 ```text

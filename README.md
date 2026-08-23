@@ -44,14 +44,6 @@ to configure and test your provider. Ferry does not configure models, endpoints,
 authentication, or credentials. The exact provider, model, and authentication
 must already work in Codex before Ferry uses them.
 
-Ferry's SDK-launched App Server does not select a CLI profile. The provider and
-authentication it needs must therefore be available from the base user config,
-normally `~/.codex/config.toml`. On Codex 0.134.0 and later, `--profile name`
-overlays `~/.codex/name.config.toml`; a provider defined only in that profile may
-pass `codex --profile name` while remaining invisible to Ferry. A profile may
-still select the model, reasoning level, or model catalog, but keep the shared
-provider/auth definition in the base config.
-
 Want Codex to handle the setup? Paste this into Codex:
 
 ```text
