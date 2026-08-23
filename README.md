@@ -44,24 +44,34 @@ to configure and test your provider. Ferry does not configure models, endpoints,
 authentication, or credentials. The exact provider, model, and authentication
 must already work in Codex before Ferry uses them.
 
+Ferry's SDK-launched App Server does not select a CLI profile. The provider and
+authentication it needs must therefore be available from the base user config,
+normally `~/.codex/config.toml`. On Codex 0.134.0 and later, `--profile name`
+overlays `~/.codex/name.config.toml`; a provider defined only in that profile may
+pass `codex --profile name` while remaining invisible to Ferry. A profile may
+still select the model, reasoning level, or model catalog, but keep the shared
+provider/auth definition in the base config.
+
 ### DeepSeek example
 
-After following the Codex guide, if your working provider is named `deepseek`,
-verify it directly through Codex. Replace the model id if your configuration
-uses a different one.
+After following the Codex guide and the official
+[DeepSeek Codex guide](https://api-docs.deepseek.com/quick_start/agent_integrations/codex),
+if your base configuration exposes a provider named `deepseek`, verify the same
+unprofiled seam Ferry will use. Replace the model id if your configuration uses
+a different one, and supply authentication through your configured Codex auth
+mechanism.
 
 ```sh
-export DEEPSEEK_API_KEY="YOUR_KEY"
-
 codex exec -s read-only \
   -c 'model_provider="deepseek"' \
   -m deepseek-v4-pro \
   'Reply with exactly DEEPSEEK_CODEX_OK.'
 ```
 
-Continue only after Codex returns `DEEPSEEK_CODEX_OK`. Ferry will never silently
-fall back to the owner model when an explicitly requested provider is missing,
-misconfigured, or reports a different native provider identity.
+Continue only after this command, without `--profile`, returns
+`DEEPSEEK_CODEX_OK`. Ferry will never silently fall back to the owner model when
+an explicitly requested provider is missing, misconfigured, or reports a
+different native provider identity.
 
 ## Install
 

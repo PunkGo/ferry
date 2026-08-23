@@ -41,22 +41,31 @@ diff、执行检查，并决定接受、steer、返工、interrupt 或停止。
 配置并验证 provider。Ferry 不配置模型、endpoint、认证或凭证；完全相同的
 provider、model 和 auth 必须先在 Codex 中正常工作，Ferry 才会使用它们。
 
+Ferry 通过 SDK 启动 App Server 时不会选择 CLI profile，因此所需的 provider
+和认证必须能从基础用户配置（通常是 `~/.codex/config.toml`）读取。Codex
+0.134.0 及以上版本中，`--profile name` 会叠加
+`~/.codex/name.config.toml`；如果 provider 只定义在该 profile 中，它可能在
+`codex --profile name` 下通过，却对 Ferry 不可见。profile 仍可选择 model、
+推理强度或模型目录，但共享的 provider/auth 定义应放在基础配置中。
+
 ### DeepSeek 示例
 
-按照 Codex 教程完成配置后，如果可用的 provider 名为 `deepseek`，先直接通过
-Codex 验证它。如果你的配置使用了其他 model id，请替换示例中的值。
+按照 Codex 教程和 DeepSeek 官方的
+[Codex 接入指南](https://api-docs.deepseek.com/zh-cn/quick_start/agent_integrations/codex)
+完成配置后，如果基础配置暴露的 provider 名为 `deepseek`，验证 Ferry 将使用的
+同一条无 profile seam。如果你的配置使用了其他 model id，请替换示例中的值；
+认证由你已配置的 Codex auth 机制提供。
 
 ```sh
-export DEEPSEEK_API_KEY="YOUR_KEY"
-
 codex exec -s read-only \
   -c 'model_provider="deepseek"' \
   -m deepseek-v4-pro \
   'Reply with exactly DEEPSEEK_CODEX_OK.'
 ```
 
-只有 Codex 返回 `DEEPSEEK_CODEX_OK` 后才继续。明确请求的 provider 缺失、配置
-错误，或 native provider identity 不一致时，Ferry 绝不会静默换成 owner model。
+只有这条不带 `--profile` 的命令返回 `DEEPSEEK_CODEX_OK` 后才继续。明确请求的
+provider 缺失、配置错误，或 native provider identity 不一致时，Ferry 绝不会
+静默换成 owner model。
 
 ## 安装
 
