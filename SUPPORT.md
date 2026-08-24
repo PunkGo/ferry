@@ -1,6 +1,6 @@
 # Support and proof matrix
 
-Ferry has a public 0.1.5 release. Each row describes only the exact seam, runtime, and platform observed.
+Ferry has a public 0.1.6 release. Each row describes only the exact seam, runtime, and platform observed.
 
 | Path | Platform | Runtime | Result |
 | --- | --- | --- | --- |
@@ -9,6 +9,7 @@ Ferry has a public 0.1.5 release. Each row describes only the exact seam, runtim
 | SDK live steer and interrupt | macOS arm64 | Codex 0.149.0 + `openai-codex` 0.147.0 + MCP 2.0.0 + Python 3.14.6 | Proved through the installed product MCP after the native-liveness repair: bounded OpenAI and DeepSeek steer completed; bounded OpenAI and DeepSeek interrupt reached native `interrupted` |
 | 0.1.4 Doctor control and event filtering | macOS arm64 | Codex 0.149.0 + Python 3.12.11 + `openai-codex` 0.147.0 + MCP 2.0.0 + temporary installed Ferry `0.1.4+c7b7ecb69294` | Proved: two sequential command continuations, same-thread follow-up, command-`inProgress`-gated steer and interrupt with native terminal effects, reasoning-delta suppression, and unchanged Git |
 | 0.1.5 public distribution and Doctor contract | macOS arm64 | Python 3.12.11 + uv + Ferry `0.1.5+0fa18c2ba0f7` | Proved: standard wheel/sdist, matching PyPI and GitHub hashes, fresh public-index install with no SDK or SDK CLI before setup; the corrected upstream steer contract reclassifies the existing 0.1.4 same-turn Doctor evidence as `READY` without another provider run |
+| 0.1.6 public distribution and worker instruction policies | macOS arm64 | Python 3.12.11 + uv 0.11.15 + Ferry `0.1.6+cf0665ec6a27` | Proved: standard wheel/sdist, matching PyPI and GitHub hashes, fresh public-index install with no SDK or SDK CLI before setup, plus credentialed Codex/DeepSeek acceptance of the default disabled-hook and inherited-skill policies |
 | uv distribution and installed lifecycle | Omen Windows x64 | Codex 0.149.0 + Python 3.13.12 + uv 0.9.5 + `openai-codex` 0.147.0 + Ferry `0.1.2+5ef801fda4f6` | Proved: fresh install, upgrade to disposable `0.1.3+e0108b17ad12`, setup/status, five-tool discovery, no bundled CLI or nested venv, ordinary-state preservation, and temporary-root cleanup |
 | pipx distribution and installed lifecycle | macOS arm64 + Windows x64 | Codex 0.149.0 + Python 3.13.12 + pipx 1.16.7 + `openai-codex` 0.147.0 + Ferry `0.1.0+44b9f226d4eb` | Proved: final cutover artifacts and lifecycle; the installed provider call remains proved on the pre-cutover `0.1.0+8cf98cf0cca6` artifact; two-version upgrade, owner calls, and installed-entry advisory faults passed |
 
@@ -42,5 +43,5 @@ Start a fresh Codex session before use. Setup installs the exact SDK pin without
 Close every Ferry-using Codex session before `ferry uninstall && uv tool
 uninstall ferry-codex` (or the matching `pipx uninstall ferry-codex`). This does
 not delete Codex threads, provider configuration, or credentials. The
-distribution gates are proved, and Ferry 0.1.5 is published on PyPI from Git
-commit `0fa18c2ba0f7d122ade0664d5d01eb3be58e0fad`.
+distribution gates are proved, and Ferry 0.1.6 is published on PyPI from Git
+commit `cf0665ec6a27c19720eba9e48f4c6a3122bfd3e9`.
