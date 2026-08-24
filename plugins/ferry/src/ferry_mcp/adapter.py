@@ -16,6 +16,8 @@ MAX_EVENT_TEXT = 4_096
 MIN_LIVENESS_READ_RESERVE_S = 0.001
 MAX_LIVENESS_READ_RESERVE_S = 0.050
 ALLOWED_SANDBOXES = ("read-only", "workspace-write", "danger-full-access")
+ALLOWED_HOOK_POLICIES = ("disabled", "inherit")
+ALLOWED_SKILL_POLICIES = ("inherit", "disabled")
 
 
 class FerryFailure(Exception):
@@ -54,6 +56,21 @@ def _sandbox(value: str, operation: str) -> str:
     if value not in ALLOWED_SANDBOXES:
         raise FerryFailure("INVALID_SANDBOX", operation, "sandbox is not allowed", sandbox=value)
     return value
+
+
+def _policy(value: str, name: str, allowed: tuple[str, ...], operation: str) -> str:
+    if value not in allowed:
+        raise FerryFailure("INVALID_ARGUMENT", operation, f"{name} is not allowed", **{name: value})
+    return value
+
+
+def _thread_config(hook_policy: str, skill_policy: str) -> dict[str, Any] | None:
+    config: dict[str, Any] = {}
+    if hook_policy == "disabled":
+        config["features"] = {"hooks": False}
+    if skill_policy == "disabled":
+        config["skills"] = {"include_instructions": False}
+    return config or None
 
 
 def _bound(value: int, name: str, maximum: int, operation: str) -> int:
@@ -158,18 +175,20 @@ class FerryAdapter:
             raise RuntimeError("Ferry SDK shutdown failed: " + "; ".join(str(item) for item in failures)) from failures[0]
 
     async def worker_start(self, cwd: str, provider: str, brief: str, model: str | None,
-                           sandbox: str) -> dict[str, Any]:
+                           sandbox: str, hook_policy: str, skill_policy: str) -> dict[str, Any]:
         async with self._lock:
-            return await self._worker_start(cwd, provider, brief, model, sandbox)
+            return await self._worker_start(cwd, provider, brief, model, sandbox, hook_policy, skill_policy)
 
     async def _worker_start(self, cwd: str, provider: str, brief: str, model: str | None,
-                           sandbox: str) -> dict[str, Any]:
+                           sandbox: str, hook_policy: str, skill_policy: str) -> dict[str, Any]:
         operation = "worker_start"
         try:
             cwd = _cwd(cwd, operation)
             provider = _text(provider, "provider", operation)
             brief = _text(brief, "brief", operation)
             sandbox = _sandbox(sandbox, operation)
+            hook_policy = _policy(hook_policy, "hook_policy", ALLOWED_HOOK_POLICIES, operation)
+            skill_policy = _policy(skill_policy, "skill_policy", ALLOWED_SKILL_POLICIES, operation)
             if model is not None:
                 model = _text(model, "model", operation)
             if self._live is not None:
@@ -178,7 +197,8 @@ class FerryAdapter:
             thread = await self._client.thread_start(cwd=cwd, model_provider=provider, model=model,
                                                      sandbox=self._sandbox_factory(sandbox),
                                                      approval_mode=self._approval_mode, ephemeral=False,
-                                                     service_name=self._service_name)
+                                                     service_name=self._service_name,
+                                                     config=_thread_config(hook_policy, skill_policy))
             native = await thread.read(include_turns=False)
             actual_provider, actual_model, actual_cwd = _metadata(native)
             if actual_provider != provider:
@@ -193,7 +213,8 @@ class FerryAdapter:
                                    expected_cwd=cwd, actual_cwd=actual_cwd, thread_id=thread.id)
             turn = await thread.turn(brief, cwd=cwd, sandbox=self._sandbox_factory(sandbox))
             self._live = LiveTurn(thread=thread, turn=turn, stream=turn.stream())
-            return self._starting_result(thread.id, turn.id, actual_provider, model, actual_model, actual_cwd)
+            return self._starting_result(thread.id, turn.id, actual_provider, model, actual_model, actual_cwd,
+                                         hook_policy, skill_policy)
         except FerryFailure as exc:
             return exc.result()
         except Exception as exc:
@@ -363,12 +384,15 @@ class FerryAdapter:
             return _cause(operation, exc, thread_id=thread_id, turn_id=turn_id).result()
 
     async def worker_follow_up(self, thread_id: str, provider: str, brief: str, cwd: str,
-                               model: str | None, sandbox: str) -> dict[str, Any]:
+                               model: str | None, sandbox: str, hook_policy: str,
+                               skill_policy: str) -> dict[str, Any]:
         async with self._lock:
-            return await self._worker_follow_up(thread_id, provider, brief, cwd, model, sandbox)
+            return await self._worker_follow_up(thread_id, provider, brief, cwd, model, sandbox,
+                                                hook_policy, skill_policy)
 
     async def _worker_follow_up(self, thread_id: str, provider: str, brief: str, cwd: str,
-                               model: str | None, sandbox: str) -> dict[str, Any]:
+                               model: str | None, sandbox: str, hook_policy: str,
+                               skill_policy: str) -> dict[str, Any]:
         operation = "worker_follow_up"
         try:
             if self._live is not None:
@@ -379,11 +403,14 @@ class FerryAdapter:
             provider = _text(provider, "provider", operation)
             brief = _text(brief, "brief", operation)
             sandbox = _sandbox(sandbox, operation)
+            hook_policy = _policy(hook_policy, "hook_policy", ALLOWED_HOOK_POLICIES, operation)
+            skill_policy = _policy(skill_policy, "skill_policy", ALLOWED_SKILL_POLICIES, operation)
             if model is not None:
                 model = _text(model, "model", operation)
             thread = await self._client.thread_resume(thread_id, cwd=cwd, model_provider=provider, model=model,
                                                       sandbox=self._sandbox_factory(sandbox),
-                                                      approval_mode=self._approval_mode)
+                                                      approval_mode=self._approval_mode,
+                                                      config=_thread_config(hook_policy, skill_policy))
             native = await thread.read(include_turns=False)
             actual_provider, actual_model, actual_cwd = _metadata(native)
             if actual_provider != provider:
@@ -397,7 +424,8 @@ class FerryAdapter:
                                    expected_cwd=cwd, actual_cwd=actual_cwd, thread_id=thread.id)
             turn = await thread.turn(brief, cwd=cwd, sandbox=self._sandbox_factory(sandbox))
             self._live = LiveTurn(thread=thread, turn=turn, stream=turn.stream())
-            return self._starting_result(thread.id, turn.id, actual_provider, model, actual_model, actual_cwd)
+            return self._starting_result(thread.id, turn.id, actual_provider, model, actual_model, actual_cwd,
+                                         hook_policy, skill_policy)
         except FerryFailure as exc:
             return exc.result()
         except Exception as exc:
@@ -405,11 +433,13 @@ class FerryAdapter:
 
     @staticmethod
     def _starting_result(thread_id: str, turn_id: str, provider: str, requested_model: str | None,
-                         observed_model: str | None, cwd: str | None) -> dict[str, Any]:
+                         observed_model: str | None, cwd: str | None, requested_hook_policy: str,
+                         requested_skill_policy: str) -> dict[str, Any]:
         result = {"ok": True, "thread_id": thread_id, "turn_id": turn_id, "provider": provider,
                   "requested_model": requested_model, "observed_model": observed_model,
                   "model_verification": "verified" if observed_model is not None else "not_available",
-                  "cwd": cwd, "status": "starting"}
+                  "cwd": cwd, "status": "starting", "requested_hook_policy": requested_hook_policy,
+                  "requested_skill_policy": requested_skill_policy}
         if observed_model is None:
             result["model_verification_reason"] = "codex_thread_metadata_not_available"
         return result

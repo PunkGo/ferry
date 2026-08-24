@@ -55,12 +55,37 @@ lifecycle, tool, completion, usage, warning, and error events remain observable
 and exactly-once even when a typed failure is returned. Do not aggregate deltas,
 add a queue or configuration flag, or change the public tool surface.
 
+## Worker instruction policies
+
+`worker_start` and `worker_follow_up` each accept the same two Codex-native
+policy switches. They are request-scoped—not Ferry configuration—and their
+returned `requested_hook_policy` and `requested_skill_policy` fields echo only
+what Ferry requested, never a claim about Codex's effective state.
+
+- `hook_policy` is `disabled` by default or `inherit` when explicitly requested.
+  `disabled` sends the native thread config `{features:{hooks:false}}`, avoiding
+  inherited hook execution for the worker. `inherit` omits that override, so
+  Codex's effective hook configuration, including per-hook enablement and
+  trust, applies. Ferry never selects hooks: `/hooks` and Codex policy remain
+  authoritative.
+- `skill_policy` is `inherit` by default or `disabled` when explicitly requested.
+  `inherit` omits a skills override and retains Codex's automatic skill
+  instructions. `disabled` sends `{skills:{include_instructions:false}}`, which
+  suppresses those automatic instructions and reduces worker context. Ferry
+  never selects skills: `skills.config` and Codex policy remain authoritative.
+
+When both policies are overridden, combine those two native config objects
+without replacing either. Managed or administrator requirements can still apply;
+preserve their native failure cause rather than treating an echo field as
+verification. Do not add a Ferry hook/skill registry, list, selector, whitelist,
+or persisted configuration.
+
 ## Delegate
 
 1. Read repository authority. Resolve the exact absolute worktree and capture Git identity and porcelain state when Git is available.
 2. Read [references/worker-brief.md](references/worker-brief.md) completely and construct one bounded brief using its existing section order.
 3. Keep one writer. Additional agents are read-only unless the user explicitly authorizes independent parallel writers.
-4. Start the selected native worker or `worker_start` with exact worktree, brief, sandbox, and requested model/provider.
+4. Start the selected native worker or `worker_start` with exact worktree, brief, sandbox, requested model/provider, and the needed request-scoped instruction policies. Inspect the `worker_start` and `worker_follow_up` schemas for their defaults and tradeoffs before overriding either policy.
 5. For the MCP route, `worker_start` and `worker_follow_up` return `starting`.
    Repeatedly call bounded `worker_wait`; control is eligible only after it
    returns `active`, meaning the exact turn emitted `turn/started` and a fresh

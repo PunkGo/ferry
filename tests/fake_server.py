@@ -52,7 +52,7 @@ class Turn:
   if self.thread.read_gate is not None: self.thread.read_gate.set()
   self.fail=False; self.thread.liveness="idle"; self.queue.put_nowait(Event("turn/completed", {"status":Status.interrupted}))
 class Thread:
- def __init__(self, client, ident, cwd, provider, model=None): self.client,self.id,self.cwd,self.provider,self.model,self.read_count,self.liveness,self.read_failure,self.read_timeout,self.read_gate,self.unexpected_status,self.system_error,self.turn_ready=client,ident,cwd,provider,model,0,"active",False,False,None,False,False,False
+ def __init__(self, client, ident, cwd, provider, model=None, config=None): self.client,self.id,self.cwd,self.provider,self.model,self.config,self.read_count,self.liveness,self.read_failure,self.read_timeout,self.read_gate,self.unexpected_status,self.system_error,self.turn_ready=client,ident,cwd,provider,model,config,0,"active",False,False,None,False,False,False
  async def read(self, include_turns=False):
   self.read_count+=1
   if include_turns: raise RuntimeError("terminal path must not read history")
@@ -89,12 +89,22 @@ class Thread:
   if brief=="native-read-timeout": self.read_timeout=True
   if brief=="unexpected-status": self.unexpected_status=True
   if brief=="system-error": self.system_error=True; turn.queue.put_nowait(Event("item/updated", {"queued":True})); turn.queue.put_nowait(Event("turn/completed", {"status":Status.failed,"error":{"message":"native system error cause"}}))
+  expected_configs={
+   "policy-disabled-inherit":{"features":{"hooks":False}},
+   "policy-inherit-inherit":None,
+   "policy-disabled-disabled":{"features":{"hooks":False},"skills":{"include_instructions":False}},
+   "policy-inherit-disabled":{"skills":{"include_instructions":False}},
+  }
+  if brief in expected_configs:
+   if self.config != expected_configs[brief]: raise RuntimeError(f"unexpected thread config for {brief}: {self.config!r}")
+   self.liveness="idle"; turn.queue.put_nowait(Event("turn/completed", {"status":Status.completed}))
   return turn
 class Client:
  def __init__(self): self.n=1; self.threads={}
- async def thread_start(self, cwd, model_provider, model=None, **_):
-  ident=f"thread-{self.n}"; self.n+=1; self.threads[ident]=Thread(self,ident,cwd,model_provider,model); return self.threads[ident]
- async def thread_resume(self, thread_id, cwd, model_provider, model=None, **_): return self.threads.setdefault(thread_id,Thread(self,thread_id,cwd,model_provider,model))
+ async def thread_start(self, cwd, model_provider, model=None, config=None, **_):
+  ident=f"thread-{self.n}"; self.n+=1; self.threads[ident]=Thread(self,ident,cwd,model_provider,model,config); return self.threads[ident]
+ async def thread_resume(self, thread_id, cwd, model_provider, model=None, config=None, **_):
+  thread=self.threads.setdefault(thread_id,Thread(self,thread_id,cwd,model_provider,model,config)); thread.config=config; return thread
  async def close(self): pass
 
 server=create_server(lambda: FerryAdapter(Client(), _sandbox), advisory_factory=BrokenAdvisory if os.environ.get("FERRY_FAKE_BROKEN_ADVISORY") else NoAdvisory)

@@ -32,7 +32,7 @@ mcp_version = next(node.value.value for node in mcp_module.body
                    if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "__version__"
                                                            for target in node.targets)
                    if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str))
-assert PUBLIC_VERSION == "0.1.5"
+assert PUBLIC_VERSION == "0.1.6"
 assert project_version == plugin_version == mcp_version == PUBLIC_VERSION
 skill_contract = (PLUGIN / "skills" / "ferry" / "SKILL.md").read_text()
 for required in (

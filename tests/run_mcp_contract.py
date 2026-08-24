@@ -19,8 +19,10 @@ ROOT = Path(__file__).resolve().parents[1]
 ERRLOG = tempfile.TemporaryFile(mode="w+")
 sys.path.insert(0, str(ROOT / "plugins" / "ferry" / "src"))
 
-from ferry_mcp.adapter import ALLOWED_SANDBOXES, MAX_EVENTS, MAX_TEXT, MAX_WAIT_MS, FerryAdapter
-from ferry_mcp.server import FailureGuidance, _sandbox
+from ferry_mcp.adapter import (ALLOWED_HOOK_POLICIES, ALLOWED_SANDBOXES,
+                               ALLOWED_SKILL_POLICIES, MAX_EVENTS, MAX_TEXT,
+                               MAX_WAIT_MS, FerryAdapter)
+from ferry_mcp.server import FailureGuidance, PolicyGuidance, _sandbox
 from fake_server import Client
 
 
@@ -72,6 +74,8 @@ async def main() -> None:
             }
             for tool in tools.tools:
                 assert tool_guidance[tool.name] in tool.description and FailureGuidance in tool.description
+            for tool_name in ("worker_start", "worker_follow_up"):
+                assert PolicyGuidance in next(tool.description for tool in tools.tools if tool.name == tool_name)
             expected_required = {
                 "worker_start": ["cwd", "provider", "brief"],
                 "worker_wait": ["thread_id", "turn_id"],
@@ -102,9 +106,19 @@ async def main() -> None:
                 sandbox = schemas[tool_name]["properties"]["sandbox"]
                 assert sandbox["default"] == "read-only" and sandbox["enum"] == list(ALLOWED_SANDBOXES)
                 assert sandbox["description"] == "Sandbox for the next start or follow-up; one of the supported modes."
+                hook_policy = schemas[tool_name]["properties"]["hook_policy"]
+                skill_policy = schemas[tool_name]["properties"]["skill_policy"]
+                assert hook_policy["default"] == "disabled" and hook_policy["enum"] == list(ALLOWED_HOOK_POLICIES)
+                assert skill_policy["default"] == "inherit" and skill_policy["enum"] == list(ALLOWED_SKILL_POLICIES)
+                assert "Concrete hook selection remains Codex-owned." in hook_policy["description"]
+                assert "Concrete skill selection remains Codex-owned." in skill_policy["description"]
+                assert "features.hooks=false" in hook_policy["description"]
+                assert "skills.include_instructions=false" in skill_policy["description"]
+            assert "Policy overview:" in initialized.instructions
+            assert "Inspect the worker_start and worker_follow_up schemas" in initialized.instructions
 
             runtime_adapter = FerryAdapter(Client(), _sandbox)
-            runtime_start = await runtime_adapter.worker_start(str(ROOT), "openai", "runtime", None, "read-only")
+            runtime_start = await runtime_adapter.worker_start(str(ROOT), "openai", "runtime", None, "read-only", "disabled", "inherit")
             runtime_too_many = await runtime_adapter.worker_wait(runtime_start["thread_id"], runtime_start["turn_id"], 100, 100)
             assert runtime_too_many["error"]["code"] == "INVALID_ARGUMENT"
             await runtime_adapter.close()
@@ -115,6 +129,32 @@ async def main() -> None:
             assert mismatch["error"]["code"] == "PROVIDER_MISMATCH"
             model_mismatch = await call(session, "worker_start", cwd=str(ROOT), provider="openai", model="mismatch-model", brief="x")
             assert model_mismatch["error"]["code"] == "MODEL_MISMATCH"
+            invalid_hook_policy = await call(session, "worker_start", cwd=str(ROOT), provider="openai", brief="x", hook_policy="unknown")
+            assert invalid_hook_policy["error"]["code"] == "INVALID_ARGUMENT"
+            invalid_skill_policy = await call(session, "worker_start", cwd=str(ROOT), provider="openai", brief="x", skill_policy="unknown")
+            assert invalid_skill_policy["error"]["code"] == "INVALID_ARGUMENT"
+
+            policy_cases = (
+                ("policy-disabled-inherit", {}, "disabled", "inherit"),
+                ("policy-inherit-inherit", {"hook_policy": "inherit"}, "inherit", "inherit"),
+                ("policy-disabled-disabled", {"skill_policy": "disabled"}, "disabled", "disabled"),
+                ("policy-inherit-disabled", {"hook_policy": "inherit", "skill_policy": "disabled"}, "inherit", "disabled"),
+            )
+            for brief, policies, expected_hook_policy, expected_skill_policy in policy_cases:
+                policy_start = await call(session, "worker_start", cwd=str(ROOT), provider="openai", brief=brief, **policies)
+                assert policy_start["ok"] and policy_start["requested_hook_policy"] == expected_hook_policy
+                assert policy_start["requested_skill_policy"] == expected_skill_policy
+                policy_start_terminal = await call(session, "worker_wait", thread_id=policy_start["thread_id"], turn_id=policy_start["turn_id"], timeout_ms=10, max_events=4)
+                assert policy_start_terminal["status"] == "terminal"
+                invalid_follow_up_policy = await call(session, "worker_follow_up", thread_id=policy_start["thread_id"], provider="openai", cwd=str(ROOT), brief=brief, hook_policy="unknown")
+                assert invalid_follow_up_policy["error"]["code"] == "INVALID_ARGUMENT"
+                invalid_follow_up_skill_policy = await call(session, "worker_follow_up", thread_id=policy_start["thread_id"], provider="openai", cwd=str(ROOT), brief=brief, skill_policy="unknown")
+                assert invalid_follow_up_skill_policy["error"]["code"] == "INVALID_ARGUMENT"
+                policy_follow_up = await call(session, "worker_follow_up", thread_id=policy_start["thread_id"], provider="openai", cwd=str(ROOT), brief=brief, **policies)
+                assert policy_follow_up["ok"] and policy_follow_up["requested_hook_policy"] == expected_hook_policy
+                assert policy_follow_up["requested_skill_policy"] == expected_skill_policy
+                policy_follow_up_terminal = await call(session, "worker_wait", thread_id=policy_follow_up["thread_id"], turn_id=policy_follow_up["turn_id"], timeout_ms=10, max_events=4)
+                assert policy_follow_up_terminal["status"] == "terminal"
 
             start = await call(session, "worker_start", cwd=str(ROOT), provider="openai", brief="x")
             assert start["ok"]
@@ -122,6 +162,7 @@ async def main() -> None:
             assert start["requested_model"] is None and start["observed_model"] is None
             assert start["model_verification"] == "not_available"
             assert start["model_verification_reason"] == "codex_thread_metadata_not_available"
+            assert start["requested_hook_policy"] == "disabled" and start["requested_skill_policy"] == "inherit"
             public_too_many = await call(session, "worker_wait", thread_id=start["thread_id"], turn_id=start["turn_id"], timeout_ms=100, max_events=100)
             assert public_too_many["error"]["code"] == "INVALID_ARGUMENT"
             immediate_interrupt = await call(session, "worker_interrupt", thread_id=start["thread_id"], turn_id=start["turn_id"])

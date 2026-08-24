@@ -19,3 +19,13 @@ private reporting route without publishing exploit details.
 
 Version-scoped support is documented in `SUPPORT.md`. Unproved platform/provider
 rows are not security guarantees.
+
+For an explicit alternate-provider worker, Ferry defaults `hook_policy` to
+`disabled`, which requests Codex-native hook suppression for that worker.
+Explicit `inherit` restores Codex's effective hooks and their per-hook
+trust/enablement. `skill_policy` defaults to `inherit`; explicit `disabled`
+requests that Codex omit automatic skill instructions, reducing worker context.
+These are request echoes rather than proof of effective Codex policy: managed or
+administrator requirements remain authoritative. Ferry neither selects hooks or
+skills nor maintains a registry, and any native policy failure is returned with
+its cause.

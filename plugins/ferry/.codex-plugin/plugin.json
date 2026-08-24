@@ -1,6 +1,6 @@
 {
   "name": "ferry",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Delegate bounded Codex work while preserving owner judgment.",
   "author": {
     "name": "Ferry"

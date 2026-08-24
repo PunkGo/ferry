@@ -43,6 +43,25 @@ If Codex later exposes a stable native owner-to-external-provider worker seam, t
 
 Ferry has no `ferry.toml` and no model alias registry. Provider definitions, endpoints, credentials, model names, sandbox defaults, and profiles remain in Codex-owned machine-local configuration. Configuration is greater than code, and each fact has one owner.
 
+## Worker instruction policy boundary
+
+The custom-provider worker surface has two request-scoped Codex-native switches
+on both thread start and resume: `hook_policy=disabled|inherit` (default
+`disabled`) and `skill_policy=inherit|disabled` (default `inherit`). Disabling
+hooks sends `{features:{hooks:false}}`; inheriting hooks omits that override.
+Disabling skills sends `{skills:{include_instructions:false}}`; inheriting skills
+omits that override. When both are disabled, the adapter combines those objects
+in one public SDK `config` argument.
+
+This is deliberately a narrow safety/context boundary, not an ownership claim.
+Hook `inherit` restores Codex's effective hook configuration, including its
+per-hook trust and enablement; skill `disabled` suppresses automatic skill
+instructions and therefore reduces worker context. Concrete selection remains
+Codex-owned through `/hooks` and `skills.config`; Ferry has no hook/skill list,
+selector, whitelist, or persisted policy. Start and resume results echo the
+requested policies, not verified effective state. Managed or administrator
+requirements remain authoritative and native failures retain their cause.
+
 ## Installation boundary
 
 Ferry requires a user-installed Python 3.10+ runtime and reuses the user's existing `codex` executable. It does not bundle a Python interpreter or the Python SDK's pinned second copy of the Codex CLI.
